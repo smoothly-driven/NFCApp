@@ -5,23 +5,28 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
+import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
     public static final String MIME_TEXT_PLAIN = "text/plain";
 
     private NfcAdapter mNfcAdapter;
+    private String mText;
+    private TextView mTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mTextView = (TextView) findViewById(R.id.textView);
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
         if (mNfcAdapter == null) {
@@ -46,7 +51,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleIntent(Intent intent) {
-        if (intent != null && NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
+        Log.d("NFCTAG", intent.getAction());
+        if (intent != null && NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction()) || NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction()) || NfcAdapter.ACTION_TAG_DISCOVERED.equals(intent.getAction())) {
             Parcelable[] rawMessages =
                     intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
             if (rawMessages != null) {
@@ -54,6 +60,20 @@ public class MainActivity extends AppCompatActivity {
                 for (int i = 0; i < rawMessages.length; i++) {
                     messages[i] = (NdefMessage) rawMessages[i];
                 }
+
+                mText = "";
+                for (NdefMessage message : messages) {
+                    mText += message.toString();
+                    for (NdefRecord record : message.getRecords()) {
+                        Log.d("NFCTAG", "to mime : " + record.toMimeType());
+                        Log.d("NFCTAG", "to uri : " + record.toUri());
+                        Log.d("NFCTAG", "payload : " + record.getPayload().toString());
+                        Log.d("NFCTAG", "tnf : " + record.getTnf());
+                        Log.d("NFCTAG", "type : " + record.getType().toString());
+                    }
+                }
+
+                mTextView.setText(mText);
                 // Process the messages array.
             }
         }
@@ -82,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * @param activity The corresponding {@link Activity} requesting the foreground dispatch.
-     * @param adapter The {@link NfcAdapter} used for the foreground dispatch.
+     * @param adapter  The {@link NfcAdapter} used for the foreground dispatch.
      */
     public static void setupForegroundDispatch(final Activity activity, NfcAdapter adapter) {
         final Intent intent = new Intent(activity.getApplicationContext(), activity.getClass());
@@ -108,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * @param activity The corresponding {@link Activity} requesting to stop the foreground dispatch.
-     * @param adapter The {@link NfcAdapter} used for the foreground dispatch.
+     * @param adapter  The {@link NfcAdapter} used for the foreground dispatch.
      */
     public static void stopForegroundDispatch(final Activity activity, NfcAdapter adapter) {
         adapter.disableForegroundDispatch(activity);
