@@ -8,7 +8,7 @@ import android.net.Uri;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
-import android.nfc.tech.NfcA;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.os.SystemClock;
@@ -24,23 +24,46 @@ import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.api.GoogleApiClient;
 
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.FormBody;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 public class MainActivity extends AppCompatActivity {
 
     public static final String MIME_TEXT_PLAIN = "text/plain";
+    public static final String SERVER_IP = "http://10.111.17.139:5000";
 
+    private OkHttpClient mHttpClient;
     private NfcAdapter mNfcAdapter;
     private TextView mTagContentsTextView;
     private EditText mWriteToTagEditText;
     private CheckBox mShouldWriteCheckBox;
 
-    private String tagContents = "";
+    private String mCardContents = "";
     private String editTextContents = "";
+
+    private String mCardTechnology = "Ndef";
+    private long mScanDuration;
+    private int mScans;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mHttpClient = new OkHttpClient();
         mTagContentsTextView = (TextView) findViewById(R.id.textView);
         mWriteToTagEditText = (EditText) findViewById(R.id.editText);
         mShouldWriteCheckBox = (CheckBox) findViewById(R.id.checkBox);
@@ -53,6 +76,11 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        Log.d("WHAT", "Serial : " + Build.SERIAL);
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
     @Override
@@ -61,9 +89,16 @@ public class MainActivity extends AppCompatActivity {
 
         long intentReceptionTime = SystemClock.elapsedRealtime(); //apparently better than System.currentTimeMillis() ?
         handleIntent(intent);
-        long processDuration = SystemClock.elapsedRealtime() - intentReceptionTime;
+        mScanDuration = SystemClock.elapsedRealtime() - intentReceptionTime;
         String prefixString = mShouldWriteCheckBox.isChecked() ? "Reading + writing took " : "Reading took ";
-        Toast.makeText(this, prefixString + processDuration + " ms.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, prefixString + mScanDuration + " ms.", Toast.LENGTH_SHORT).show();
+
+        try {
+            postScanResult(mCardTechnology, mCardContents, mScanDuration, mScans);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
         updateUi();
 
     }
@@ -76,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
             int opStatus = NFCUtils.writeTag(NFCUtils.getMessageAsNdef(mWriteToTagEditText.getText().toString()), detectedTag);
             Log.d("NFCTAG", "writing operation returned a code " + opStatus);
             if (opStatus == NFCUtils.CODE_SUCCESS) {
-                tagContents = mWriteToTagEditText.getText().toString();
+                mCardContents = mWriteToTagEditText.getText().toString();
                 editTextContents = "";
             }
         } else {
@@ -87,15 +122,16 @@ public class MainActivity extends AppCompatActivity {
                     messages[i] = (NdefMessage) rawMessages[i];
                 }
 
-                tagContents = NFCUtils.readMessageContents(messages);
-                Log.d("NFCTAG", "messages were successfully decoded : " + tagContents);
+                mCardContents = NFCUtils.readMessageContents(messages);
+                Log.d("NFCTAG", "messages were successfully decoded : " + mCardContents);
                 editTextContents = mWriteToTagEditText.getText().toString();
             }
         }
+        mScans++;
     }
 
     private void updateUi() {
-        mTagContentsTextView.setText(tagContents);
+        mTagContentsTextView.setText(mCardContents);
         mWriteToTagEditText.setText(editTextContents);
         mShouldWriteCheckBox.setChecked(false);
     }
@@ -158,4 +194,71 @@ public class MainActivity extends AppCompatActivity {
         adapter.disableForegroundDispatch(activity);
     }
 
+    void postScanResult(String cardTechnology, String cardContents, long scanDuration, int scans) throws IOException {
+
+        RequestBody body = new FormBody.Builder()
+                .add("card_technology", cardTechnology)
+                .add("card_contents", cardContents)
+                .add("scan_duration", String.valueOf(scanDuration))
+                .add("scans", String.valueOf(scans))
+                .add("device_serial", Build.SERIAL)
+                .build();
+
+        Request request = new Request.Builder()
+                .url(SERVER_IP + "/results")
+                .post(body)
+                .build();
+
+        mHttpClient.newCall(request)
+                .enqueue(new Callback() {
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        Log.d("NFCTAG", "exception : ");
+                        e.printStackTrace();
+                        Log.d("NFCTAG", "Error posting scan result!");
+                    }
+
+                    @Override
+                    public void onResponse(Call call, Response response) throws IOException {
+                        Log.d("NFCTAG", "Successfully posted scan result!");
+                        Log.d("NFCTAG", response.body().string());
+                    }
+                });
+    }
+
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    public Action getIndexApiAction() {
+        Thing object = new Thing.Builder()
+                .setName("Main Page") // TODO: Define a title for the content shown.
+                // TODO: Make sure this auto-generated URL is correct.
+                .setUrl(Uri.parse("http://[ENTER-YOUR-URL-HERE]"))
+                .build();
+        return new Action.Builder(Action.TYPE_VIEW)
+                .setObject(object)
+                .setActionStatus(Action.STATUS_TYPE_COMPLETED)
+                .build();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        AppIndex.AppIndexApi.start(client, getIndexApiAction());
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        AppIndex.AppIndexApi.end(client, getIndexApiAction());
+        client.disconnect();
+    }
 }
