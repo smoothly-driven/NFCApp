@@ -4,29 +4,41 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.nfc.FormatException;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
+import android.nfc.Tag;
+import android.nfc.tech.Ndef;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.TextView;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 public class MainActivity extends AppCompatActivity {
 
     public static final String MIME_TEXT_PLAIN = "text/plain";
 
     private NfcAdapter mNfcAdapter;
-    private String mText;
-    private TextView mTextView;
+    private TextView mTagContentsTextView;
+    private EditText mTextToWriteEditText;
+    private CheckBox mShouldWriteCheckBox;
+    private String mTagContents;
+    private String mTextToWrite;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mTextView = (TextView) findViewById(R.id.textView);
+        mTagContentsTextView = (TextView) findViewById(R.id.tv_tag_contents);
+        mTextToWriteEditText = (EditText) findViewById(R.id.et_text_to_write);
+        mShouldWriteCheckBox = (CheckBox) findViewById(R.id.cb_write_to_tag);
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
         if (mNfcAdapter == null) {
@@ -48,35 +60,90 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         handleIntent(intent);
+        updateUi();
     }
 
     private void handleIntent(Intent intent) {
         Log.d("NFCTAG", intent.getAction());
         if (intent != null && NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction()) || NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction()) || NfcAdapter.ACTION_TAG_DISCOVERED.equals(intent.getAction())) {
-            Parcelable[] rawMessages =
-                    intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
-            if (rawMessages != null) {
-                NdefMessage[] messages = new NdefMessage[rawMessages.length];
-                for (int i = 0; i < rawMessages.length; i++) {
-                    messages[i] = (NdefMessage) rawMessages[i];
-                }
+            Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+            handleNdef(tag, mShouldWriteCheckBox.isChecked(), mTextToWriteEditText.getText().toString());
+            mShouldWriteCheckBox.setChecked(false);
+        }
+    }
 
-                mText = "";
-                for (NdefMessage message : messages) {
-                    mText += message.toString();
-                    for (NdefRecord record : message.getRecords()) {
-                        Log.d("NFCTAG", "to mime : " + record.toMimeType());
-                        Log.d("NFCTAG", "to uri : " + record.toUri());
-                        Log.d("NFCTAG", "payload : " + record.getPayload().toString());
-                        Log.d("NFCTAG", "tnf : " + record.getTnf());
-                        Log.d("NFCTAG", "type : " + record.getType().toString());
+    private void handleNdef(Tag tag, boolean shouldWrite, String textToWrite) {
+        Ndef ndef;
+        try {
+            ndef = Ndef.get(tag);
+            if (ndef == null) return;
+            ndef.connect();
+
+            if (shouldWrite && ndef.isWritable()) {
+                writeNdefMessage(ndef, textToWrite);
+            } else {
+                Log.d("NFCTAG", "tag type : " + ndef.getType());
+                NdefMessage message = ndef.getCachedNdefMessage();
+                if (message == null) {
+                    message = ndef.getNdefMessage();
+                    if (message == null) {
+                        Log.i("NFCTAG", "Empty tag");
+                        mTagContents = "";
+                        return;
                     }
                 }
-
-                mTextView.setText(mText);
-                // Process the messages array.
+                mTagContents = "";
+                for (NdefRecord record : message.getRecords()) {
+                    mTagContents += NFCUtils.readNdefRecord(record);
+                }
             }
+            ndef.close();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            Log.e("NFCTAG", "Could not connect to tag");
+            return;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            Log.e("NFCTAG", "error handling tag");
+            return;
         }
+    }
+
+    private NdefRecord createNdefRecord(String text) {
+
+        //create the message in according with the standard
+        String lang = "en";
+        byte[] textBytes = text.getBytes();
+        byte[] langBytes = null;
+        try {
+            langBytes = lang.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        int langLength = langBytes.length;
+        int textLength = textBytes.length;
+
+        byte[] payload = new byte[1 + langLength + textLength];
+        payload[0] = (byte) langLength;
+
+        // copy langbytes and textbytes into payload
+        System.arraycopy(langBytes, 0, payload, 1, langLength);
+        System.arraycopy(textBytes, 0, payload, 1 + langLength, textLength);
+
+        NdefRecord recordNFC = new NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, new byte[0], payload);
+        return recordNFC;
+    }
+
+    private void writeNdefMessage(Ndef ndef, String text) throws IOException, FormatException {
+        NdefRecord[] records = {createNdefRecord(text)};
+        NdefMessage message = new NdefMessage(records);
+        ndef.writeNdefMessage(message);
+    }
+
+    private void updateUi() {
+        mTagContentsTextView.setText(mTagContents);
+        if (mShouldWriteCheckBox.isChecked()) mTextToWriteEditText.setText(mTextToWrite);
     }
 
     @Override
@@ -110,18 +177,21 @@ public class MainActivity extends AppCompatActivity {
 
         final PendingIntent pendingIntent = PendingIntent.getActivity(activity.getApplicationContext(), 0, intent, 0);
 
-        IntentFilter[] filters = new IntentFilter[1];
+        IntentFilter[] filters = new IntentFilter[2];
         String[][] techList = new String[][]{};
 
         // Notice that this is the same filter as in our manifest.
         filters[0] = new IntentFilter();
         filters[0].addAction(NfcAdapter.ACTION_NDEF_DISCOVERED);
-        filters[0].addCategory(Intent.CATEGORY_DEFAULT);
-        try {
-            filters[0].addDataType(MIME_TEXT_PLAIN);
-        } catch (IntentFilter.MalformedMimeTypeException e) {
-            throw new RuntimeException("Check your mime type.");
-        }
+
+        filters[1] = new IntentFilter();
+        filters[1].addAction(NfcAdapter.ACTION_TAG_DISCOVERED);
+        filters[1].addCategory(Intent.CATEGORY_DEFAULT);
+        //try {
+        //    filters[0].addDataType(MIME_TEXT_PLAIN);
+        //} catch (IntentFilter.MalformedMimeTypeException e) {
+        //    throw new RuntimeException("Check your mime type.");
+        //}
 
         adapter.enableForegroundDispatch(activity, pendingIntent, filters, techList);
     }
