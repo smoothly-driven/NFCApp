@@ -5,7 +5,6 @@ import android.nfc.NdefRecord;
 import android.nfc.Tag;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.NdefFormatable;
-import android.widget.Toast;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -18,8 +17,6 @@ public class NFCUtils {
 
     public static final int CODE_SUCCESS = 0;
     public static final int CODE_FAILURE = 1;
-
-
 
     public static String readMessageContents(NdefMessage[] messages) {
         String text = "";
@@ -54,7 +51,6 @@ public class NFCUtils {
 
     public static int writeTag(NdefMessage message, Tag tag) {
         int size = message.toByteArray().length;
-        String mess = "";
         try {
             Ndef ndef = Ndef.get(tag);
             if (ndef != null) {
@@ -85,22 +81,12 @@ public class NFCUtils {
     }
 
     public static NdefMessage getMessageAsNdef(String message) {
-        boolean addAAR = false;
         byte[] messageBytes = message.getBytes(Charset.forName("UTF-8"));
         byte[] payload = new byte[messageBytes.length + 1];       //add 1 for the URI Prefix
         payload[0] = 0x00;
         System.arraycopy(messageBytes, 0, payload, 1, messageBytes.length);
         NdefRecord rtdUriRecord = new NdefRecord(
                 NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, new byte[0], payload);
-        if (addAAR) {
-            // note: returns AAR for different app (nfcreadtag)
-            return new NdefMessage(new NdefRecord[]{
-                    rtdUriRecord, NdefRecord.createApplicationRecord("com.tapwise.nfcreadtag")
-            });
-        } else {
-            return new NdefMessage(new NdefRecord[]{
-                    rtdUriRecord});
-        }
+        return new NdefMessage(new NdefRecord[]{rtdUriRecord});
     }
-
 }
