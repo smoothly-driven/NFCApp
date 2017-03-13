@@ -24,7 +24,7 @@
 
         <TextView
             android:textSize="18sp"
-            android:id="@+id/textView"
+            android:id="@+id/text_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
@@ -43,7 +43,7 @@
 
         <EditText
             android:textSize="18sp"
-            android:id="@+id/editText"
+            android:id="@+id/edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
@@ -56,16 +56,33 @@
 
         <TextView
             android:textSize="18sp"
-            android:text="Write text "
+            android:text="Write content "
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
         <CheckBox
-            android:id="@+id/checkBox"
+            android:id="@+id/chk_write"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
     </LinearLayout>
 
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:textSize="18sp"
+            android:text="Read content "
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <CheckBox
+            android:id="@+id/chk_read"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+    </LinearLayout>
 
 </LinearLayout>

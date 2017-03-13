@@ -1,5 +1,6 @@
 package com.example.robot_server.nfcapp;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Date;
@@ -10,33 +11,35 @@ import java.util.Date;
 
 public class ScanResult {
 
-    private String mCardContent;
-    private String[] mCardTechnology;
-    private long mScanDuration;
-    private int mScans;
+    private final String mCardUid;
+    private final String mCardContent;
+    private final String[] mCardTechnology;
+    private final long mScanDuration;
+    private final int mScans;
 
-    private String mImei;
-    private String mFamocoId;
-    private String mModel;
-    private String mImage;
+    private final String mImei;
+    private final String mFamocoId;
+    private final String mModel;
+    private final String mImage;
 
-    private boolean detectOnly = false;
-    private boolean readContent = true;
+    private final boolean detectOnly;
+    private final boolean readContent;
 
-    private Date mTimestamp;
+    private final Date mTimestamp;
 
-    public ScanResult(String tagContents, String[] cardTechnology, int scans, String imei, String famocoId, String model, String image, long scanDuration, Date timestamp, boolean detectOnly, boolean readContent) {
-        this.mCardContent = tagContents;
-        this.mCardTechnology = cardTechnology;
-        this.mScans = scans;
-        this.mImei = imei;
-        this.mFamocoId = famocoId;
-        this.mModel = model;
-        this.mImage = image;
-        this.mScanDuration = scanDuration;
-        this.mTimestamp = timestamp;
-        this.detectOnly = detectOnly;
-        this.readContent = readContent;
+    private ScanResult(ScanResultBuilder builder) {
+        this.mCardUid = builder.mCardUid;
+        this.mCardContent = builder.mCardContent;
+        this.mCardTechnology = builder.mCardTechnology;
+        this.mScans = builder.mScans;
+        this.mImei = builder.mImei;
+        this.mFamocoId = builder.mFamocoId;
+        this.mModel = builder.mModel;
+        this.mImage = builder.mImage;
+        this.mScanDuration = builder.mScanDuration;
+        this.mTimestamp = builder.mTimestamp;
+        this.detectOnly = builder.detectOnly;
+        this.readContent = builder.readContent;
     }
 
     public JSONObject toJson() {
@@ -50,7 +53,8 @@ public class ScanResult {
             identifiers.put("imei", mImei);
             testDetails.put("readContent", readContent);
             testDetails.put("detectOnly", detectOnly);
-            jsonBody.put("card_technology", mCardTechnology);
+            jsonBody.put("card_uid", mCardUid);
+            jsonBody.put("card_technology", new JSONArray(mCardTechnology));
             jsonBody.put("card_contents", mCardContent);
             jsonBody.put("scan_duration", mScanDuration);
             jsonBody.put("scans", mScans);
@@ -66,5 +70,99 @@ public class ScanResult {
     @Override
     public String toString() {
         return toJson().toString();
+    }
+
+    public static class ScanResultBuilder {
+
+        private String mCardUid;
+        private String mCardContent;
+        private String[] mCardTechnology;
+        private long mScanDuration;
+        private int mScans;
+
+        private String mImei;
+        private String mFamocoId;
+        private String mModel;
+        private String mImage;
+
+        private Date mTimestamp;
+
+        private boolean detectOnly;
+        private boolean readContent;
+
+        public ScanResultBuilder() {
+
+        }
+
+        public ScanResultBuilder(String imei, String famocoId, String model, String image) {
+            this.mImei = imei;
+            this.mFamocoId = famocoId;
+            this.mModel = model;
+            this.mImage = image;
+        }
+
+        public ScanResultBuilder cardUid(String cardUid) {
+            mCardUid = cardUid;
+            return this;
+        }
+
+        public ScanResultBuilder cardContent(String cardContent) {
+            mCardContent = cardContent;
+            return this;
+        }
+
+        public ScanResultBuilder cardTechnology(String[] cardTechnology) {
+            mCardTechnology = cardTechnology;
+            return this;
+        }
+
+        public ScanResultBuilder scanDuration(long scanDuration) {
+            mScanDuration = scanDuration;
+            return this;
+        }
+
+        public ScanResultBuilder scans(int scans) {
+            mScans = scans;
+            return this;
+        }
+
+        public ScanResultBuilder imei(String imei) {
+            mImei = imei;
+            return this;
+        }
+
+        public ScanResultBuilder famocoId(String famocoId) {
+            mFamocoId = famocoId;
+            return this;
+        }
+
+        public ScanResultBuilder model(String model) {
+            mModel = model;
+            return this;
+        }
+
+        public ScanResultBuilder image(String image) {
+            mImage = image;
+            return this;
+        }
+
+        public ScanResultBuilder timestamp(Date timestamp) {
+            mTimestamp = timestamp;
+            return this;
+        }
+
+        public ScanResultBuilder detectOnly(boolean detectOnly) {
+            this.detectOnly = detectOnly;
+            return this;
+        }
+
+        public ScanResultBuilder readContent(boolean readContent) {
+            this.readContent = readContent;
+            return this;
+        }
+
+        public ScanResult build() {
+            return new ScanResult(this);
+        }
     }
 }

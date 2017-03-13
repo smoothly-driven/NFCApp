@@ -3,14 +3,14 @@ package com.example.robot_server.nfcapp;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Created by robot-server on 09.03.17.
  */
 
-public class Preferences {
+public class PreferenceUtils {
 
     public static final String PREFERENCES_NAME = "nfc_preferences";
 
@@ -24,5 +24,22 @@ public class Preferences {
     public static Set<String> getStringSet(Context context, String key) {
         SharedPreferences sp = context.getSharedPreferences(PREFERENCES_NAME, 0);
         return sp.getStringSet(key, null);
+    }
+
+    public static Set<String> serversToStringSet(Set<Server> servers) {
+        Set<String> strings = new HashSet<>();
+        for (Server server : servers) {
+            strings.add(server.toString());
+        }
+        return strings;
+    }
+
+    public static Set<Server> stringsToServerSet(Set<String> strings) {
+        if (strings == null) return null;
+        Set<Server> servers = new HashSet<>();
+        for (String string : strings) {
+            servers.add(Server.fromString(string));
+        }
+        return servers;
     }
 }

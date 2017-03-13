@@ -89,4 +89,16 @@ public class NFCUtils {
                 NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, new byte[0], payload);
         return new NdefMessage(new NdefRecord[]{rtdUriRecord});
     }
+
+    public static String byteArrayToHex(byte[] inarray) {
+        String[] hex = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"};
+        String out = "";
+
+        for(int j = 0; j < inarray.length; j++) {
+            int in = (int) inarray[j] & 0xff;
+            int i = (in >> 4) & 0x0f;
+            out += hex[i];
+        }
+        return out;
+    }
 }
