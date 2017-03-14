@@ -21,11 +21,8 @@ public class ScanResult {
     private final String mFamocoId;
     private final String mModel;
     private final String mImage;
-
-    private final boolean detectOnly;
-    private final boolean readContent;
-
     private final Date mTimestamp;
+    private String mTestProfile;
 
     private ScanResult(ScanResultBuilder builder) {
         this.mCardUid = builder.mCardUid;
@@ -38,8 +35,7 @@ public class ScanResult {
         this.mImage = builder.mImage;
         this.mScanDuration = builder.mScanDuration;
         this.mTimestamp = builder.mTimestamp;
-        this.detectOnly = builder.detectOnly;
-        this.readContent = builder.readContent;
+        this.mTestProfile = builder.mTestProfile;
     }
 
     public JSONObject toJson() {
@@ -51,8 +47,7 @@ public class ScanResult {
             identifiers.put("famoco_id", mFamocoId);
             identifiers.put("model", mModel);
             identifiers.put("imei", mImei);
-            testDetails.put("readContent", readContent);
-            testDetails.put("detectOnly", detectOnly);
+            testDetails.put("testProfile", mTestProfile);
             jsonBody.put("card_uid", mCardUid);
             jsonBody.put("card_technology", new JSONArray(mCardTechnology));
             jsonBody.put("card_contents", mCardContent);
@@ -86,9 +81,7 @@ public class ScanResult {
         private String mImage;
 
         private Date mTimestamp;
-
-        private boolean detectOnly;
-        private boolean readContent;
+        private String mTestProfile;
 
         public ScanResultBuilder() {
 
@@ -151,13 +144,8 @@ public class ScanResult {
             return this;
         }
 
-        public ScanResultBuilder detectOnly(boolean detectOnly) {
-            this.detectOnly = detectOnly;
-            return this;
-        }
-
-        public ScanResultBuilder readContent(boolean readContent) {
-            this.readContent = readContent;
+        public ScanResultBuilder testProfile(String testProfile) {
+            mTestProfile = testProfile;
             return this;
         }
 

@@ -1,4 +1,4 @@
-package com.example.robot_server.nfcapp;
+package com.example.robot_server.nfcapp.utils;
 
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
@@ -13,7 +13,7 @@ import java.nio.charset.Charset;
  * Created by robot-server on 14.02.17.
  */
 
-public class NFCUtils {
+public class NfcUtils {
 
     public static final int CODE_SUCCESS = 0;
     public static final int CODE_FAILURE = 1;

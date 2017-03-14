@@ -4,43 +4,35 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.nfc.NdefMessage;
+import android.graphics.Color;
 import android.nfc.NfcAdapter;
-import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.util.ArrayList;
+import com.example.robot_server.nfcapp.processors.IntentProcessor;
+import com.example.robot_server.nfcapp.utils.HttpUtils;
+import com.example.robot_server.nfcapp.utils.PreferenceUtils;
+
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.Response;
-import processors.IntentProcessor;
-import processors.MetaProcessor;
-import processors.ReadProcessor;
-import processors.WriteProcessor;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,21 +42,33 @@ public class MainActivity extends AppCompatActivity {
     public static final String KEY_SERVERS = "servers";
     public static final String RESULTS_ENDPOINT = "/results";
 
+    public static final String START_TEST_TEXT = "Start test";
+    public static final String STOP_TEST_TEXT = "Stop test";
+    public static final String PAUSE_TEST_TEXT = "Pause test";
+    public static final String RESUME_TEST_TEXT = "Resume test";
+
+    public static final String STATUS_RUNNING = "Running";
+    public static final String STATUS_PAUSED = "Paused";
+    public static final String STATUS_NOT_RUNNING = "Not running";
+
     private Set<Server> mServers;
-    private List<IntentProcessor> mProcessors;
-    private OkHttpClient mHttpClient;
+    private ProfileManager mProfileManager;
+    private ProcessProfile mProfile;
     private NfcAdapter mNfcAdapter;
     private TextView mTagContentsTextView;
     private EditText mWriteToTagEditText;
     private CheckBox mShouldWriteCheckBox;
     private CheckBox mShouldReadCheckBox;
+    private Button mStartButton;
+    private Button mStopButton;
+    private TextView mStatusTextView;
+    private TextView mScansTextView;
 
-    private StringWrapper mCardContents = new StringWrapper("");
-    private StringWrapper editTextContents = new StringWrapper("");
+    private StringWrapper mCardContent;
+    private StringWrapper mEditTextContent;
 
     private int mScans;
-
-    private String mIMEI;
+    private String mImei;
     private String mFamocoId;
     private String mModel;
     private String mImage;
@@ -103,6 +107,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        if (!checkNfc()) return;
+        setupLayoutComponents();
+        setupListeners();
+        loadServers();
+
+        mProfileManager = new ProfileManager();
+
+        TelephonyManager tm = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+        this.mImei = tm.getDeviceId();
+        this.mFamocoId = Build.SERIAL;
+        this.mImage = Build.DISPLAY;
+        this.mModel = Build.MODEL;
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         setupForegroundDispatch(this, mNfcAdapter);
@@ -114,82 +137,7 @@ public class MainActivity extends AppCompatActivity {
          * Call this before onPause, otherwise an IllegalArgumentException is thrown as well.
          */
         stopForegroundDispatch(this, mNfcAdapter);
-
         super.onPause();
-    }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-        if (mNfcAdapter == null) {
-            Log.e("NFCTAG", "The device doesn't have NFC");
-            finish();
-            return;
-        }
-
-        mTagContentsTextView = (TextView) findViewById(R.id.text_view);
-        mWriteToTagEditText = (EditText) findViewById(R.id.edit_text);
-        mShouldWriteCheckBox = (CheckBox) findViewById(R.id.chk_write);
-        mShouldReadCheckBox = (CheckBox) findViewById(R.id.chk_read);
-
-        mShouldReadCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    mProcessors.add(1, new ReadProcessor(mCardContents));
-                } else {
-                    removeProcessor("ReadProcessor");
-                }
-            }
-        });
-
-        mShouldWriteCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    mProcessors.add(new WriteProcessor(editTextContents));
-                } else {
-                    removeProcessor("WriteProcessor");
-                }
-            }
-        });
-
-        mWriteToTagEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                editTextContents.set(s.toString());
-            }
-        });
-
-        mHttpClient = new OkHttpClient();
-
-        mServers = PreferenceUtils.stringsToServerSet(PreferenceUtils.getStringSet(this, KEY_SERVERS));
-        if (mServers == null) {
-            mServers = new HashSet<>();
-            mServers.add(new Server(DEFAULT_SERVER_IP, "Default server"));
-        }
-
-        mProcessors = new ArrayList<>();
-        mProcessors.add(new MetaProcessor());
-        //mProcessors.add(new ReadProcessor(mCardContents));
-        //mProcessors.add(new WriteProcessor(editTextContents));
-
-        TelephonyManager tm = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
-        this.mIMEI = tm.getDeviceId();
-        this.mFamocoId = Build.SERIAL;
-        this.mImage = Build.DISPLAY;
-        this.mModel = Build.MODEL;
     }
 
     private void addServer(String ip, String alias) {
@@ -197,111 +145,175 @@ public class MainActivity extends AppCompatActivity {
         PreferenceUtils.putStringSet(this, KEY_SERVERS, PreferenceUtils.serversToStringSet(mServers));
     }
 
+    private boolean checkNfc() {
+        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        if (mNfcAdapter == null) {
+            Log.e("NFCTAG", "The device doesn't have NFC");
+            finish();
+            return false;
+        }
+        return true;
+    }
+
+    private void setupLayoutComponents() {
+        mCardContent = new StringWrapper("");
+        mEditTextContent = new StringWrapper("");
+        mTagContentsTextView = (TextView) findViewById(R.id.text_view);
+        mWriteToTagEditText = (EditText) findViewById(R.id.edit_text);
+        mShouldWriteCheckBox = (CheckBox) findViewById(R.id.chk_write);
+        mShouldReadCheckBox = (CheckBox) findViewById(R.id.chk_read);
+        mStartButton = (Button) findViewById(R.id.btn_start);
+        mStopButton = (Button) findViewById(R.id.btn_stop);
+        mStatusTextView = (TextView) findViewById(R.id.tv_test_status);
+        mScansTextView = (TextView) findViewById(R.id.tv_scans);
+
+        mStartButton.setText(START_TEST_TEXT);
+        mStopButton.setText(STOP_TEST_TEXT);
+        mScansTextView.setText(String.valueOf(mScans));
+    }
+
+    private void setupListeners() {
+        CompoundButton.OnCheckedChangeListener chkListener = new OnCheckedChangeListener();
+        mShouldReadCheckBox.setOnCheckedChangeListener(chkListener);
+        mShouldWriteCheckBox.setOnCheckedChangeListener(chkListener);
+
+        TextWatcher textChangeListener = new OnTextChangeListener();
+        mWriteToTagEditText.addTextChangedListener(textChangeListener);
+        View.OnClickListener buttonClickListener = new OnButtonClickedListener();
+
+        mStartButton.setOnClickListener(buttonClickListener);
+        mStopButton.setOnClickListener(buttonClickListener);
+    }
+
+    private void loadServers() {
+        mServers = PreferenceUtils.stringsToServerSet(PreferenceUtils.getStringSet(this, KEY_SERVERS));
+        if (mServers == null) {
+            mServers = new HashSet<>();
+            mServers.add(new Server(DEFAULT_SERVER_IP, "Default server"));
+        }
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        long intentReceptionTime = SystemClock.elapsedRealtime(); //apparently better than System.currentTimeMillis() ?
-        mScans++;
-        ScanResult.ScanResultBuilder builder = new ScanResult.ScanResultBuilder(mIMEI, mFamocoId, mModel, mImage).scans(mScans);
-        for (IntentProcessor processor : mProcessors) {
-            processor.process(intent, builder);
-        }
-        //handleIntent(intent, builder);
-        long scanDuration = SystemClock.elapsedRealtime() - intentReceptionTime;
-        builder.scanDuration(scanDuration)
-                .timestamp(new Date())
-                .detectOnly(false)
-                .readContent(true);
-        ScanResult scanResult = builder.build();
-        try {
+        if (isRunning && !isPaused) {
+            long intentReceptionTime = SystemClock.elapsedRealtime(); //apparently better than System.currentTimeMillis() ?
+            ScanResult.ScanResultBuilder builder = new ScanResult.ScanResultBuilder(mImei, mFamocoId, mModel, mImage).scans(++mScans);
+            for (IntentProcessor processor : mProfile) {
+                processor.process(intent, builder);
+            }
+            long scanDuration = SystemClock.elapsedRealtime() - intentReceptionTime;
+            builder.scanDuration(scanDuration)
+                    .timestamp(new Date())
+                    .testProfile(mProfile.getName());
+
+            Toast.makeText(this, (mShouldWriteCheckBox.isChecked() ? "Reading + writing took " : "Reading took ") + scanDuration + " ms.", Toast.LENGTH_SHORT).show();
+
+            ScanResult scanResult = builder.build();
             postScanResult(scanResult);
-        } catch (IOException ex) {
-            ex.printStackTrace();
+
+            updateUi();
         }
+    }
+
+    private void startTest() {
+        if (!isPaused) {
+            mScans = 0;
+            mProfile = mProfileManager.buildProfile();
+            mWriteToTagEditText.setEnabled(false);
+            mShouldWriteCheckBox.setEnabled(false);
+            mShouldReadCheckBox.setEnabled(false);
+            mStopButton.setEnabled(true);
+        }
+        mStartButton.setText(PAUSE_TEST_TEXT);
+        mStatusTextView.setText(STATUS_RUNNING);
+        mStatusTextView.setTextColor(Color.GREEN);
+        isRunning = true;
+        isPaused = false;
         updateUi();
-        Toast.makeText(this, mShouldWriteCheckBox.isChecked() ? "Reading + writing took " : "Reading took " + scanDuration + " ms.", Toast.LENGTH_SHORT).show();
-
     }
 
-    private void removeProcessor(String simpleClassName) {
-        for (int i = 0; i < mProcessors.size(); i++) {
-            if (mProcessors.get(i).getClass().getSimpleName().equals(simpleClassName)) {
-                mProcessors.remove(i);
-                break;
-            }
-        }
+    private void pauseTest() {
+        mStartButton.setText(RESUME_TEST_TEXT);
+        mStatusTextView.setText(STATUS_PAUSED);
+        mStatusTextView.setTextColor(Color.BLUE);
+        isPaused = true;
     }
 
-    private void handleIntent(Intent intent, ScanResult.ScanResultBuilder builder) {
-        long intentReceptionTime = SystemClock.elapsedRealtime(); //apparently better than System.currentTimeMillis() ?
-        Log.v("NFCTAG", intent.getAction());
-        Tag detectedTag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-        builder.cardTechnology(detectedTag.getTechList())
-                .cardUid(NFCUtils.byteArrayToHex(detectedTag.getId()));
-        if (mShouldWriteCheckBox.isChecked()) {
-            int opStatus = NFCUtils.writeTag(NFCUtils.getMessageAsNdef(mWriteToTagEditText.getText().toString()), detectedTag);
-            Log.v("NFCTAG", "writing operation returned a code " + opStatus);
-            if (opStatus == NFCUtils.CODE_SUCCESS) {
-                mCardContents.set(mWriteToTagEditText.getText().toString());
-                builder.cardContent(mCardContents.get());
-                editTextContents.set("");
-            }
-        } else {
-            Parcelable[] rawMessages = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
-            if (rawMessages != null) {
-                NdefMessage[] messages = new NdefMessage[rawMessages.length];
-                for (int i = 0; i < rawMessages.length; i++) {
-                    messages[i] = (NdefMessage) rawMessages[i];
-                }
-                mCardContents.set(NFCUtils.readMessageContents(messages));
-                builder.cardContent(mCardContents.get());
-                Log.v("NFCTAG", "messages were successfully decoded : " + mCardContents);
-                editTextContents.set(mWriteToTagEditText.getText().toString());
-            }
-        }
-        mScans++;
-        long scanDuration = SystemClock.elapsedRealtime() - intentReceptionTime;
-        builder.scans(mScans)
-                .scanDuration(scanDuration)
-                .timestamp(new Date())
-                .detectOnly(false)
-                .readContent(true);
-
-        Toast.makeText(this, mShouldWriteCheckBox.isChecked() ? "Reading + writing took " : "Reading took " + scanDuration + " ms.", Toast.LENGTH_SHORT).show();
+    private void stopTest() {
+        mWriteToTagEditText.setEnabled(true);
+        mShouldWriteCheckBox.setEnabled(true);
+        mShouldReadCheckBox.setEnabled(true);
+        mStopButton.setEnabled(false);
+        mStartButton.setText(START_TEST_TEXT);
+        mStatusTextView.setText(STATUS_NOT_RUNNING);
+        mStatusTextView.setTextColor(Color.RED);
+        isPaused = false;
+        isRunning = false;
     }
 
     private void updateUi() {
-        mTagContentsTextView.setText(mCardContents.get());
-        mWriteToTagEditText.setText(editTextContents.get());
-        mShouldWriteCheckBox.setChecked(false);
+        mTagContentsTextView.setText(mCardContent.get());
+        mWriteToTagEditText.setText(mEditTextContent.get());
+        mScansTextView.setText(String.valueOf(mScans));
     }
 
-    void postScanResult(ScanResult result) throws IOException {
+    void postScanResult(ScanResult result) {
         for (Server server : mServers) {
             Request request = new Request.Builder()
                     .url(server.getIp() + RESULTS_ENDPOINT)
                     .post(RequestBody.create(JSON_MEDIA_TYPE, result.toString()))
                     .build();
+            HttpUtils.sendPost(request);
+        }
+    }
 
-            mHttpClient.newCall(request)
-                    .enqueue(new Callback() {
-                        @Override
-                        public void onFailure(Call call, IOException e) {
-                            Log.d("NFCTAG", "exception : ");
-                            e.printStackTrace();
-                            Log.d("NFCTAG", "Error posting scan result to " + call.request().url().host() + ", connectivity issue");
-                        }
+    class OnButtonClickedListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            switch (v.getId()) {
+                case R.id.btn_start:
+                    if (!isRunning || isPaused) {
+                        startTest();
+                    } else {
+                        pauseTest();
+                    }
+                    break;
+                case R.id.btn_stop:
+                    stopTest();
+                    break;
+            }
+        }
+    }
 
-                        @Override
-                        public void onResponse(Call call, Response response) throws IOException {
-                            if (response.code() == HttpURLConnection.HTTP_OK) {
-                                Log.v("NFCTAG", "Successfully posted scan result to " + call.request().url().host() + "");
-                            } else {
-                                Log.v("NFCTAG", "Error posting scan result to " + call.request().url().host());
-                            }
-                            Log.v("NFCTAG", response.code() + ": " + response.body().string());
-                        }
-                    });
+    class OnCheckedChangeListener implements CompoundButton.OnCheckedChangeListener {
+        @Override
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+            switch (buttonView.getId()) {
+                case R.id.chk_read:
+                    mProfileManager.setRead(isChecked, mCardContent); // Give the processor a place to store the result
+                    break;
+                case R.id.chk_write:
+                    mProfileManager.setWrite(isChecked, mEditTextContent); // Give the processor what to write
+                    break;
+            }
+        }
+    }
+
+    class OnTextChangeListener implements TextWatcher {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+        }
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+            mEditTextContent.set(s.toString());
         }
     }
 }

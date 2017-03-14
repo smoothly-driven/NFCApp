@@ -1,7 +1,9 @@
-package com.example.robot_server.nfcapp;
+package com.example.robot_server.nfcapp.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+
+import com.example.robot_server.nfcapp.Server;
 
 import java.util.HashSet;
 import java.util.Set;
