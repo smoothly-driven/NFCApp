@@ -26,6 +26,10 @@ import com.example.robot_server.nfcapp.processors.IntentProcessor;
 import com.example.robot_server.nfcapp.utils.HttpUtils;
 import com.example.robot_server.nfcapp.utils.PreferenceUtils;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -41,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String DEFAULT_SERVER_IP = "http://10.111.17.139:5000";
     public static final String KEY_SERVERS = "servers";
     public static final String RESULTS_ENDPOINT = "/results";
+    public static final String PROFILES_ENDPOINT = "/profiles";
 
     public static final String START_TEST_TEXT = "Start test";
     public static final String STOP_TEST_TEXT = "Stop test";
@@ -61,6 +66,8 @@ public class MainActivity extends AppCompatActivity {
     private CheckBox mShouldReadCheckBox;
     private Button mStartButton;
     private Button mStopButton;
+    private Button mSaveProfileButton;
+    private Button mLoadProfileButton;
     private TextView mStatusTextView;
     private TextView mScansTextView;
 
@@ -158,12 +165,14 @@ public class MainActivity extends AppCompatActivity {
     private void setupLayoutComponents() {
         mCardContent = new StringWrapper("");
         mEditTextContent = new StringWrapper("");
-        mTagContentsTextView = (TextView) findViewById(R.id.text_view);
-        mWriteToTagEditText = (EditText) findViewById(R.id.edit_text);
+        mTagContentsTextView = (TextView) findViewById(R.id.tv_tag_content);
+        mWriteToTagEditText = (EditText) findViewById(R.id.et_to_write);
         mShouldWriteCheckBox = (CheckBox) findViewById(R.id.chk_write);
         mShouldReadCheckBox = (CheckBox) findViewById(R.id.chk_read);
         mStartButton = (Button) findViewById(R.id.btn_start);
         mStopButton = (Button) findViewById(R.id.btn_stop);
+        mLoadProfileButton = (Button) findViewById(R.id.btn_load_profile);
+        mSaveProfileButton = (Button) findViewById(R.id.btn_save_profile);
         mStatusTextView = (TextView) findViewById(R.id.tv_test_status);
         mScansTextView = (TextView) findViewById(R.id.tv_scans);
 
@@ -183,6 +192,8 @@ public class MainActivity extends AppCompatActivity {
 
         mStartButton.setOnClickListener(buttonClickListener);
         mStopButton.setOnClickListener(buttonClickListener);
+        mLoadProfileButton.setOnClickListener(buttonClickListener);
+        mSaveProfileButton.setOnClickListener(buttonClickListener);
     }
 
     private void loadServers() {
@@ -207,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
                     .timestamp(new Date())
                     .testProfile(mProfile.getName());
 
-            Toast.makeText(this, (mShouldWriteCheckBox.isChecked() ? "Reading + writing took " : "Reading took ") + scanDuration + " ms.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, mProfile.getName() + " took " + scanDuration + " ms.", Toast.LENGTH_SHORT).show();
 
             ScanResult scanResult = builder.build();
             postScanResult(scanResult);
@@ -259,12 +270,46 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void postScanResult(ScanResult result) {
+        postJson(RESULTS_ENDPOINT, result.toJson());
+    }
+
+    void postJson(String endpoint, JSONObject body) {
         for (Server server : mServers) {
             Request request = new Request.Builder()
-                    .url(server.getIp() + RESULTS_ENDPOINT)
-                    .post(RequestBody.create(JSON_MEDIA_TYPE, result.toString()))
+                    .url(server.getIp() + endpoint)
+                    .post(RequestBody.create(JSON_MEDIA_TYPE, body.toString()))
                     .build();
             HttpUtils.sendPost(request);
+        }
+    }
+
+    public void saveProfile(String profileName) {
+        JSONObject profile = new JSONObject();
+        try {
+            profile.put("toWrite", mEditTextContent.get());
+            profile.put("read", mShouldReadCheckBox.isChecked());
+            profile.put("write", mShouldWriteCheckBox.isChecked());
+            profile.put("servers", new JSONArray(PreferenceUtils.serversToStringSet(mServers)));
+
+            postJson(PROFILES_ENDPOINT, profile);
+        } catch (org.json.JSONException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void loadProfile(JSONObject profile) {
+        try {
+            mEditTextContent.set(profile.getString("toWrite"));
+            mShouldReadCheckBox.setChecked(profile.getBoolean("read"));
+            mShouldWriteCheckBox.setChecked(profile.getBoolean("write"));
+            JSONArray servers = profile.getJSONArray("servers");
+            mServers.clear();
+            for (int i = 0; i < servers.length(); i++) {
+                mServers.add(Server.fromJsonString(servers.getString(i)));
+            }
+            updateUi();
+        } catch (org.json.JSONException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -281,6 +326,17 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case R.id.btn_stop:
                     stopTest();
+                    break;
+                case R.id.btn_load_profile:
+                    String s = "{'_id': 'AVrc4R_aTYPWWJ5KOXtx','read': true,'servers': [{'alias':'Default server','ip':'http:\\/\\/10.111.17.139:5000'}],'toWrite': 'Bull','write': true}";
+                    try {
+                        loadProfile(new JSONObject(s));
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case R.id.btn_save_profile:
+                    saveProfile("profile1");
                     break;
             }
         }

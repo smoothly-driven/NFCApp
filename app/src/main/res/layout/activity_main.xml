@@ -24,7 +24,7 @@
             android:textSize="18sp" />
 
         <TextView
-            android:id="@+id/text_view"
+            android:id="@+id/tv_tag_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="18sp" />
@@ -45,7 +45,7 @@
             android:textSize="18sp" />
 
         <EditText
-            android:id="@+id/edit_text"
+            android:id="@+id/et_to_write"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="18sp" />
@@ -93,9 +93,35 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/layout_profiles"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/layout_select_read"
+        android:layout_marginTop="10dp"
+        android:weightSum="20">
+
+        <Button
+            android:id="@+id/btn_save_profile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="10"
+            android:text="Save profile" />
+
+
+        <Button
+            android:id="@+id/btn_load_profile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="10"
+            android:text="Load profile" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_scan_count"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/layout_profiles"
         android:layout_marginTop="20dp"
         android:gravity="center">
 

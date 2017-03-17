@@ -1,10 +1,14 @@
 package com.example.robot_server.nfcapp;
 
+import org.json.JSONObject;
+
+import java.io.Serializable;
+
 /**
  * Created by robot-server on 13.03.17.
  */
 
-public class Server {
+public class Server implements Serializable {
 
     private String mIp;
     private String mAlias;
@@ -12,6 +16,24 @@ public class Server {
     public Server(String ip, String alias) {
         this.mIp = ip;
         this.mAlias = alias;
+    }
+
+    public static Server fromJson(JSONObject server) {
+        try {
+            return new Server(server.getString("ip"), server.getString("alias"));
+        } catch (org.json.JSONException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
+    public static Server fromJsonString(String server) {
+        try {
+            return fromJson(new JSONObject(server));
+        } catch (org.json.JSONException ex) {
+            ex.printStackTrace();
+        }
+        return null;
     }
 
     public String getIp() {
@@ -24,11 +46,18 @@ public class Server {
 
     @Override
     public String toString() {
-        return mAlias + '@' + mIp;
+        return toJson().toString();
     }
 
-    public static Server fromString(String server) {
-        String[] attributes = server.split("@");
-        return new Server(attributes[1], attributes[0]);
+    public JSONObject toJson() {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("ip", mIp);
+            json.put("alias", mAlias);
+            return json;
+        } catch (org.json.JSONException ex) {
+            ex.printStackTrace();
+        }
+        return null;
     }
 }

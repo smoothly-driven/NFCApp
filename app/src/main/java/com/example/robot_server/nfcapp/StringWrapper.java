@@ -1,10 +1,12 @@
 package com.example.robot_server.nfcapp;
 
+import java.io.Serializable;
+
 /**
  * Created by robot-server on 13.03.17.
  */
 
-public class StringWrapper {
+public class StringWrapper implements Serializable {
 
     private String mString;
 
@@ -26,6 +28,11 @@ public class StringWrapper {
     @Override
     public String toString() {
         return mString;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return mString.equals(obj);
     }
 
 }

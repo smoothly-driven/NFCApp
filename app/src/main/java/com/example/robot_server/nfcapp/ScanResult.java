@@ -38,6 +38,11 @@ public class ScanResult {
         this.mTestProfile = builder.mTestProfile;
     }
 
+    public String getCardContent() {
+        return mCardContent;
+    }
+
+
     public JSONObject toJson() {
         JSONObject identifiers = new JSONObject();
         JSONObject testDetails = new JSONObject();

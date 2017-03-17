@@ -40,7 +40,7 @@ public class PreferenceUtils {
         if (strings == null) return null;
         Set<Server> servers = new HashSet<>();
         for (String string : strings) {
-            servers.add(Server.fromString(string));
+            servers.add(Server.fromJsonString(string));
         }
         return servers;
     }
