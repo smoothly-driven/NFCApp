@@ -6,17 +6,17 @@ import android.nfc.NfcAdapter;
 import android.os.Parcelable;
 import android.util.Log;
 
-import com.example.robot_server.nfcapp.ScanResult;
-import com.example.robot_server.nfcapp.StringWrapper;
+import com.example.robot_server.nfcapp.domain.ScanResult;
+import com.example.robot_server.nfcapp.domain.StringWrapper;
 import com.example.robot_server.nfcapp.utils.NfcUtils;
 
 /**
  * Created by robot-server on 13.03.17.
  */
 
-public class ReadProcessor extends IntentProcessor {
+class ReadProcessor extends IntentProcessor {
 
-    public static final int ID = 1;
+    public static final int ID = IntentProcessor.READ;
 
     private StringWrapper mString;
 

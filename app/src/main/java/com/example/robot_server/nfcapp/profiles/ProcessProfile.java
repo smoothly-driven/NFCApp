@@ -1,4 +1,4 @@
-package com.example.robot_server.nfcapp;
+package com.example.robot_server.nfcapp.profiles;
 
 import com.example.robot_server.nfcapp.processors.IntentProcessor;
 

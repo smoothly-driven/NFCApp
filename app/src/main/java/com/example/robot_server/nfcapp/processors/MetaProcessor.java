@@ -6,15 +6,15 @@ import android.nfc.Tag;
 import android.util.Log;
 
 import com.example.robot_server.nfcapp.utils.NfcUtils;
-import com.example.robot_server.nfcapp.ScanResult;
+import com.example.robot_server.nfcapp.domain.ScanResult;
 
 /**
  * Created by robot-server on 13.03.17.
  */
 
-public class MetaProcessor extends IntentProcessor {
+class MetaProcessor extends IntentProcessor {
 
-    public static final int ID = 0;
+    public static final int ID = IntentProcessor.META;
 
     public MetaProcessor() {
         super(ID);

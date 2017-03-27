@@ -19,8 +19,8 @@ public class HttpUtils {
 
     private static OkHttpClient httpClient = new OkHttpClient();
 
-    public static void sendPost(Request request) {
-        sendPost(request, new Callback() {
+    public static void send(Request request) {
+        send(request, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
@@ -39,7 +39,7 @@ public class HttpUtils {
         });
     }
 
-    public static void sendPost(Request request, Callback callback) {
+    public static void send(Request request, Callback callback) {
         httpClient.newCall(request).enqueue(callback);
     }
 

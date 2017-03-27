@@ -5,17 +5,17 @@ import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.util.Log;
 
-import com.example.robot_server.nfcapp.ScanResult;
-import com.example.robot_server.nfcapp.StringWrapper;
+import com.example.robot_server.nfcapp.domain.ScanResult;
+import com.example.robot_server.nfcapp.domain.StringWrapper;
 import com.example.robot_server.nfcapp.utils.NfcUtils;
 
 /**
  * Created by robot-server on 13.03.17.
  */
 
-public class WriteProcessor extends IntentProcessor {
+class WriteProcessor extends IntentProcessor {
 
-    public static final int ID = 2;
+    public static final int ID = IntentProcessor.WRITE;
 
     private StringWrapper mText;
 

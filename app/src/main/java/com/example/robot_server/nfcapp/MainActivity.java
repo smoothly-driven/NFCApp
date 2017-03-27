@@ -22,21 +22,30 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.robot_server.nfcapp.domain.NfcTest;
+import com.example.robot_server.nfcapp.domain.ScanResult;
+import com.example.robot_server.nfcapp.domain.Server;
+import com.example.robot_server.nfcapp.domain.StringWrapper;
 import com.example.robot_server.nfcapp.processors.IntentProcessor;
+import com.example.robot_server.nfcapp.profiles.ProcessProfile;
+import com.example.robot_server.nfcapp.profiles.ProfileManager;
 import com.example.robot_server.nfcapp.utils.HttpUtils;
 import com.example.robot_server.nfcapp.utils.PreferenceUtils;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String KEY_SERVERS = "servers";
     public static final String RESULTS_ENDPOINT = "/results";
     public static final String PROFILES_ENDPOINT = "/profiles";
+    public static final String PROFILE_ENDPOINT = "/profile";
 
     public static final String START_TEST_TEXT = "Start test";
     public static final String STOP_TEST_TEXT = "Stop test";
@@ -80,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
     private String mModel;
     private String mImage;
 
+    private NfcTest mNfcTest;
     private boolean isRunning, isPaused;
 
     /**
@@ -279,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
                     .url(server.getIp() + endpoint)
                     .post(RequestBody.create(JSON_MEDIA_TYPE, body.toString()))
                     .build();
-            HttpUtils.sendPost(request);
+            HttpUtils.send(request);
         }
     }
 
@@ -289,9 +300,13 @@ public class MainActivity extends AppCompatActivity {
             profile.put("toWrite", mEditTextContent.get());
             profile.put("read", mShouldReadCheckBox.isChecked());
             profile.put("write", mShouldWriteCheckBox.isChecked());
-            profile.put("servers", new JSONArray(PreferenceUtils.serversToStringSet(mServers)));
-
-            postJson(PROFILES_ENDPOINT, profile);
+            JSONArray servers = new JSONArray();
+            for (Server server : mServers) {
+                servers.put(server.toJson());
+            }
+            profile.put("servers", servers);
+            profile.put("id", mProfileManager.getProfileId());
+            postJson(PROFILE_ENDPOINT, profile);
         } catch (org.json.JSONException ex) {
             ex.printStackTrace();
         }
@@ -313,7 +328,35 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class OnButtonClickedListener implements View.OnClickListener {
+    public void syncTestProfile() {
+        Request request = new Request.Builder()
+                .url(DEFAULT_SERVER_IP + PROFILE_ENDPOINT)
+                .get()
+                .build();
+        Callback c = new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Log.d("NFCTAG", "Call failed");
+            }
+
+            @Override
+            public void onResponse(Call call, final Response response) throws IOException {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            loadProfile(new JSONObject(response.body().string()));
+                        } catch (java.io.IOException | org.json.JSONException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                });
+            }
+        };
+        HttpUtils.send(request, c);
+    }
+
+    private class OnButtonClickedListener implements View.OnClickListener {
         @Override
         public void onClick(View v) {
             switch (v.getId()) {
@@ -328,12 +371,7 @@ public class MainActivity extends AppCompatActivity {
                     stopTest();
                     break;
                 case R.id.btn_load_profile:
-                    String s = "{'_id': 'AVrc4R_aTYPWWJ5KOXtx','read': true,'servers': [{'alias':'Default server','ip':'http:\\/\\/10.111.17.139:5000'}],'toWrite': 'Bull','write': true}";
-                    try {
-                        loadProfile(new JSONObject(s));
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
+                    syncTestProfile();
                     break;
                 case R.id.btn_save_profile:
                     saveProfile("profile1");
@@ -342,7 +380,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class OnCheckedChangeListener implements CompoundButton.OnCheckedChangeListener {
+    private class OnCheckedChangeListener implements CompoundButton.OnCheckedChangeListener {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
             switch (buttonView.getId()) {
@@ -356,7 +394,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class OnTextChangeListener implements TextWatcher {
+    private class OnTextChangeListener implements TextWatcher {
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 

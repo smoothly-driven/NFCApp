@@ -1,10 +1,7 @@
-package com.example.robot_server.nfcapp;
+package com.example.robot_server.nfcapp.profiles;
 
 import com.example.robot_server.nfcapp.processors.IntentProcessor;
-import com.example.robot_server.nfcapp.processors.MetaProcessor;
 import com.example.robot_server.nfcapp.processors.ProcessorFactory;
-import com.example.robot_server.nfcapp.processors.ReadProcessor;
-import com.example.robot_server.nfcapp.processors.WriteProcessor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,24 +27,24 @@ public class ProfileManager {
     public ProfileManager() {
         mProfileNames = new HashMap<>();
         mProfileNames.put(0, PROFILE_DETECT_ONLY);
-        mProfileNames.put(ReadProcessor.ID, PROFILE_READ_ONLY);
-        mProfileNames.put(WriteProcessor.ID, PROFILE_WRITE_ONLY);
-        mProfileNames.put(ReadProcessor.ID + WriteProcessor.ID, PROFILE_READ_WRITE);
+        mProfileNames.put(IntentProcessor.READ, PROFILE_READ_ONLY);
+        mProfileNames.put(IntentProcessor.WRITE, PROFILE_WRITE_ONLY);
+        mProfileNames.put(IntentProcessor.READ + IntentProcessor.WRITE, PROFILE_READ_WRITE);
 
         mProcessors = new ArrayList<>();
-        mProcessors.add(MetaProcessor.ID);
-        mProcessors.add(ReadProcessor.ID);
-        mProcessors.add(WriteProcessor.ID);
+        mProcessors.add(IntentProcessor.META);
+        mProcessors.add(IntentProcessor.READ);
+        mProcessors.add(IntentProcessor.WRITE);
         mProfileSum = 0;
         mExtras = new HashMap<>();
     }
 
     public void setRead(boolean read, Object... extras) {
-        set(ReadProcessor.ID, read, extras);
+        set(IntentProcessor.READ, read, extras);
     }
 
     public void setWrite(boolean write, Object... extras) {
-        set(WriteProcessor.ID, write, extras);
+        set(IntentProcessor.WRITE, write, extras);
     }
 
     public void set(int id, boolean doing, Object... extras) {
@@ -72,6 +69,10 @@ public class ProfileManager {
         return sum >= id;
     }
 
+    public int getProfileId() {
+        return mProfileSum;
+    }
+
     public ProcessProfile buildProfile() {
         List<IntentProcessor> processors = new ArrayList<>();
         for (int i = mProcessors.size() - 1; i >= 0; i--) {
@@ -82,7 +83,7 @@ public class ProfileManager {
                 processors.add(0, processor);
             }
         }
-        processors.add(0, new MetaProcessor());
+        processors.add(0, ProcessorFactory.buildProcessor(IntentProcessor.META)); //always add the meta processor
         return new ProcessProfile(mProfileSum, mProfileNames.get(mProfileSum), processors);
     }
 

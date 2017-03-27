@@ -1,4 +1,4 @@
-package com.example.robot_server.nfcapp;
+package com.example.robot_server.nfcapp.domain;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
