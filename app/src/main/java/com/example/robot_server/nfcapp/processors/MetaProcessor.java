@@ -8,13 +8,9 @@ import android.util.Log;
 import com.example.robot_server.nfcapp.utils.NfcUtils;
 import com.example.robot_server.nfcapp.domain.ScanResult;
 
-/**
- * Created by robot-server on 13.03.17.
- */
-
 class MetaProcessor extends IntentProcessor {
 
-    public static final int ID = IntentProcessor.META;
+    private static final int ID = IntentProcessor.META;
 
     public MetaProcessor() {
         super(ID);

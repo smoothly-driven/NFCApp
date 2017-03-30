@@ -2,15 +2,12 @@ package com.example.robot_server.nfcapp.domain;
 
 import java.io.Serializable;
 
-/**
- * Created by robot-server on 13.03.17.
- */
-
 public class StringWrapper implements Serializable {
 
     private String mString;
 
     public StringWrapper() {
+        mString = "";
     }
 
     public StringWrapper(String string) {
@@ -31,8 +28,20 @@ public class StringWrapper implements Serializable {
     }
 
     @Override
-    public boolean equals(Object obj) {
-        return mString.equals(obj);
+    public int hashCode() {
+        return mString.hashCode();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || (getClass() != o.getClass() && o.getClass() != String.class)) return false;
+
+        if (o.getClass() == getClass()) {
+            StringWrapper that = (StringWrapper) o;
+            return that.get().equals(mString);
+        }
+
+        return mString.equals(o);
+    }
 }

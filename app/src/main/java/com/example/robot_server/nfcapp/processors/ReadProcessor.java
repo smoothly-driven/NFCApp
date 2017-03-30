@@ -10,23 +10,14 @@ import com.example.robot_server.nfcapp.domain.ScanResult;
 import com.example.robot_server.nfcapp.domain.StringWrapper;
 import com.example.robot_server.nfcapp.utils.NfcUtils;
 
-/**
- * Created by robot-server on 13.03.17.
- */
-
 class ReadProcessor extends IntentProcessor {
 
-    public static final int ID = IntentProcessor.READ;
+    private static final int ID = IntentProcessor.READ;
 
     private StringWrapper mString;
 
     public ReadProcessor() {
         super(ID);
-    }
-
-    public ReadProcessor(StringWrapper string) {
-        super(ID);
-        mString = string;
     }
 
     @Override

@@ -9,14 +9,10 @@ import android.nfc.tech.NdefFormatable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-/**
- * Created by robot-server on 14.02.17.
- */
-
 public class NfcUtils {
 
     public static final int CODE_SUCCESS = 0;
-    public static final int CODE_FAILURE = 1;
+    private static final int CODE_FAILURE = 1;
 
     public static String readMessageContents(NdefMessage[] messages) {
         String text = "";
@@ -28,10 +24,10 @@ public class NfcUtils {
         return text;
     }
 
-    public static String payloadToString(byte[] payload) {
+    private static String payloadToString(byte[] payload) {
         byte status = payload[0];
         int enc = status & 0x80; // Bit mask 7th bit 1
-        String encString = null;
+        String encString;
         if (enc == 0) {
             encString = "UTF-8";
         } else {
@@ -90,11 +86,12 @@ public class NfcUtils {
         return new NdefMessage(new NdefRecord[]{rtdUriRecord});
     }
 
+    @SuppressWarnings("all")
     public static String byteArrayToHex(byte[] inarray) {
         String[] hex = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"};
         String out = "";
 
-        for(int j = 0; j < inarray.length; j++) {
+        for (int j = 0; j < inarray.length; j++) {
             int in = (int) inarray[j] & 0xff;
             int i = (in >> 4) & 0x0f;
             out += hex[i];

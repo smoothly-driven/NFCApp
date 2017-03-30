@@ -1,9 +1,5 @@
 package com.example.robot_server.nfcapp.processors;
 
-/**
- * Created by robot-server on 14.03.17.
- */
-
 public class ProcessorFactory {
 
     private static final Class[] PROCESSORS = {MetaProcessor.class, ReadProcessor.class, WriteProcessor.class};

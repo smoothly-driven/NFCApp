@@ -5,10 +5,6 @@ import org.json.JSONObject;
 
 import java.util.Date;
 
-/**
- * Created by robot-server on 06.03.17.
- */
-
 public class ScanResult {
 
     private final String mCardUid;
@@ -38,12 +34,7 @@ public class ScanResult {
         this.mTestProfile = builder.mTestProfile;
     }
 
-    public String getCardContent() {
-        return mCardContent;
-    }
-
-
-    public JSONObject toJson() {
+    JSONObject toJson() {
         JSONObject identifiers = new JSONObject();
         JSONObject testDetails = new JSONObject();
         JSONObject jsonBody = new JSONObject();
@@ -88,11 +79,7 @@ public class ScanResult {
         private Date mTimestamp;
         private String mTestProfile;
 
-        public ScanResultBuilder() {
-
-        }
-
-        public ScanResultBuilder(String imei, String famocoId, String model, String image) {
+        ScanResultBuilder(String imei, String famocoId, String model, String image) {
             this.mImei = imei;
             this.mFamocoId = famocoId;
             this.mModel = model;
@@ -114,47 +101,27 @@ public class ScanResult {
             return this;
         }
 
-        public ScanResultBuilder scanDuration(long scanDuration) {
+        ScanResultBuilder scanDuration(long scanDuration) {
             mScanDuration = scanDuration;
             return this;
         }
 
-        public ScanResultBuilder scans(int scans) {
+        ScanResultBuilder scans(int scans) {
             mScans = scans;
             return this;
         }
 
-        public ScanResultBuilder imei(String imei) {
-            mImei = imei;
-            return this;
-        }
-
-        public ScanResultBuilder famocoId(String famocoId) {
-            mFamocoId = famocoId;
-            return this;
-        }
-
-        public ScanResultBuilder model(String model) {
-            mModel = model;
-            return this;
-        }
-
-        public ScanResultBuilder image(String image) {
-            mImage = image;
-            return this;
-        }
-
-        public ScanResultBuilder timestamp(Date timestamp) {
+        ScanResultBuilder timestamp(Date timestamp) {
             mTimestamp = timestamp;
             return this;
         }
 
-        public ScanResultBuilder testProfile(String testProfile) {
+        ScanResultBuilder testProfile(String testProfile) {
             mTestProfile = testProfile;
             return this;
         }
 
-        public ScanResult build() {
+        ScanResult build() {
             return new ScanResult(this);
         }
     }
