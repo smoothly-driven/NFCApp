@@ -11,16 +11,37 @@
     tools:context="com.example.robot_server.nfcapp.MainActivity">
 
     <LinearLayout
-        android:id="@+id/layout_contents"
+        android:id="@+id/layout_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
+        android:layout_marginBottom="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Profile name : "
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/tv_profile_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/layout_name"
         android:orientation="horizontal">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tag contents : "
+            android:text="Tag content : "
             android:textSize="18sp" />
 
         <TextView
@@ -35,7 +56,7 @@
         android:id="@+id/layout_write"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/layout_contents"
+        android:layout_below="@id/layout_content"
         android:orientation="horizontal">
 
         <TextView
@@ -105,7 +126,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="10"
-            android:text="Save profile" />
+            android:text="Set profile" />
 
 
         <Button

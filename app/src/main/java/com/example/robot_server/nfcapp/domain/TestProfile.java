@@ -1,7 +1,7 @@
-package com.example.robot_server.nfcapp.profiles;
+package com.example.robot_server.nfcapp.domain;
 
-import com.example.robot_server.nfcapp.domain.Server;
-import com.example.robot_server.nfcapp.domain.StringWrapper;
+import android.util.Log;
+
 import com.example.robot_server.nfcapp.processors.IntentProcessor;
 import com.example.robot_server.nfcapp.processors.ProcessorFactory;
 
@@ -25,14 +25,15 @@ public class TestProfile implements Iterable<IntentProcessor> {
     private String mName;
     private List<IntentProcessor> mProcessors;
 
-    public TestProfile() {
+    /*package*/ TestProfile() {
+        mName = "";
         readContent = new StringWrapper();
         writeContent = new StringWrapper();
         mServers = new HashSet<>();
         mServers.add(new Server("http://10.111.17.139:5000", "Default server"));
     }
 
-    public int getId() {
+    /*package*/ int getId() {
         return mId;
     }
 
@@ -65,32 +66,32 @@ public class TestProfile implements Iterable<IntentProcessor> {
         return this;
     }
 
-    public TestProfile name(String name) {
+    /*package*/ TestProfile name(String name) {
         this.mName = name;
         return this;
     }
 
-    public TestProfile read(boolean read) {
+    /*package*/ TestProfile read(boolean read) {
         this.read = read;
         return this;
     }
 
-    public TestProfile write(boolean write) {
+    /*package*/ TestProfile write(boolean write) {
         this.write = write;
         return this;
     }
 
-    public TestProfile readContent(StringWrapper readContent) {
+    /*package*/ TestProfile readContent(StringWrapper readContent) {
         this.readContent = readContent;
         return this;
     }
 
-    public TestProfile toWrite(StringWrapper writeContent) {
+    /*package*/ TestProfile toWrite(StringWrapper writeContent) {
         this.writeContent = writeContent;
         return this;
     }
 
-    public TestProfile servers(Set<Server> servers) {
+    /*package*/ TestProfile servers(Set<Server> servers) {
         this.mServers = servers;
         return this;
     }
@@ -103,6 +104,7 @@ public class TestProfile implements Iterable<IntentProcessor> {
         index++;
         if (read) {
             processors.add(ProcessorFactory.buildProcessor(IntentProcessor.READ));
+            Log.d("NFCTAG", "just added : " + processors.get(index));
             processors.get(index++).receive(readContent); // tell the processor where to store the read content.
         }
         if (write) {
@@ -112,11 +114,11 @@ public class TestProfile implements Iterable<IntentProcessor> {
         return processors;
     }
 
-    public void setup() {
+    /*package*/ void setup() {
         mProcessors = generateProcessors();
     }
 
-    public JSONObject toJson() {
+    /*package*/ JSONObject toJson() {
         JSONObject json = new JSONObject();
         JSONArray servers = new JSONArray();
         try {

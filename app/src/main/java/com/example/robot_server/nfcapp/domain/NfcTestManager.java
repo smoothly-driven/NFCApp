@@ -11,7 +11,6 @@ import android.widget.Toast;
 
 import com.example.robot_server.nfcapp.NfcTestController;
 import com.example.robot_server.nfcapp.processors.IntentProcessor;
-import com.example.robot_server.nfcapp.profiles.TestProfile;
 import com.example.robot_server.nfcapp.utils.HttpUtils;
 import com.example.robot_server.nfcapp.utils.Utils;
 
@@ -34,7 +33,7 @@ public class NfcTestManager {
 
     public static final String PLAIN_TEXT_MEDIA_TYPE = "text/plain";
     private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
-    private static final String DEFAULT_SERVER_IP = "http://10.111.17.139:5000";
+    private static final String DEFAULT_SERVER_IP = "http://10.111.17.139:5000/nfc";
     private static final String RESULTS_ENDPOINT = "/results";
     //private static final String PROFILES_ENDPOINT = "/profiles";
     private static final String PROFILE_ENDPOINT = "/profile";
@@ -189,10 +188,10 @@ public class NfcTestManager {
     public void startClicked() {
         if (isPaused) {
             resumeTest();
-        } else if (!isRunning) {
-            startTest();
-        } else {
+        } else if (isRunning) {
             pauseTest();
+        } else {
+            startTest();
         }
     }
 

@@ -20,7 +20,7 @@ import android.widget.TextView;
 
 import com.example.robot_server.nfcapp.domain.NfcTestManager;
 import com.example.robot_server.nfcapp.domain.StringWrapper;
-import com.example.robot_server.nfcapp.profiles.TestProfile;
+import com.example.robot_server.nfcapp.domain.TestProfile;
 
 import static com.example.robot_server.nfcapp.domain.NfcTestManager.PLAIN_TEXT_MEDIA_TYPE;
 
@@ -36,7 +36,8 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     public static final String STATUS_NOT_RUNNING = "Not running";
 
     private NfcAdapter mNfcAdapter;
-    private TextView mTagContentsTextView;
+    private TextView mProfileNameTextView;
+    private TextView mTagContentTextView;
     private EditText mWriteToTagEditText;
     private CheckBox mShouldWriteCheckBox;
     private CheckBox mShouldReadCheckBox;
@@ -122,7 +123,8 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     private void setupLayoutComponents() {
         mCardContent = new StringWrapper("");
         mToWrite = new StringWrapper("");
-        mTagContentsTextView = (TextView) findViewById(R.id.tv_tag_content);
+        mProfileNameTextView = (TextView) findViewById(R.id.tv_profile_name);
+        mTagContentTextView = (TextView) findViewById(R.id.tv_tag_content);
         mWriteToTagEditText = (EditText) findViewById(R.id.et_to_write);
         mShouldWriteCheckBox = (CheckBox) findViewById(R.id.chk_write);
         mShouldReadCheckBox = (CheckBox) findViewById(R.id.chk_read);
@@ -198,19 +200,21 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         mStatusTextView.setTextColor(Color.RED);
     }
 
-    @Override
-    public void updateUi() {
-        mTagContentsTextView.setText(mCardContent.get());
+    private void updateUi() {
+        mTagContentTextView.setText(mCardContent.get());
         mWriteToTagEditText.setText(mToWrite.get());
         mScansTextView.setText(String.valueOf(mNfcTestManager.getScans()));
     }
 
+    @Override
     public void updateUi(TestProfile profile) {
         triggeredInternally = true;
-        mTagContentsTextView.setText(profile.getReadContent());
+        mProfileNameTextView.setText(profile.getName());
+        mTagContentTextView.setText(profile.getReadContent());
         mWriteToTagEditText.setText(profile.getWriteContent());
         mShouldReadCheckBox.setChecked(profile.getRead());
         mShouldWriteCheckBox.setChecked(profile.getWrite());
+        //profile.getServers();
         triggeredInternally = false;
         mScansTextView.setText(String.valueOf(mNfcTestManager.getScans()));
     }
@@ -264,7 +268,6 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
 
         @Override
         public void afterTextChanged(Editable s) {
-
             if (!triggeredInternally) mToWrite.set(s.toString());
         }
     }

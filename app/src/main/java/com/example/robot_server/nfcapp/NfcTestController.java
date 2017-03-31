@@ -1,6 +1,6 @@
 package com.example.robot_server.nfcapp;
 
-import com.example.robot_server.nfcapp.profiles.TestProfile;
+import com.example.robot_server.nfcapp.domain.TestProfile;
 
 public interface NfcTestController {
 
@@ -11,8 +11,6 @@ public interface NfcTestController {
     void resumeTest();
 
     void stopTest();
-
-    void updateUi();
 
     void updateUi(TestProfile profile);
 
