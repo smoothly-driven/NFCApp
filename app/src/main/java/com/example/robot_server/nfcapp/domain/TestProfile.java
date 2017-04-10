@@ -9,15 +9,21 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class TestProfile implements Iterable<IntentProcessor> {
 
+    private static Map<String, Integer> propertyMap;
+
+    private Map<String, Object> propertyPayloadMap;
     private boolean read;
     private boolean write;
+    private List<String> mProperties;
     private StringWrapper readContent;
     private StringWrapper writeContent;
     private Set<Server> mServers;
@@ -31,6 +37,12 @@ public class TestProfile implements Iterable<IntentProcessor> {
         writeContent = new StringWrapper();
         mServers = new HashSet<>();
         mServers.add(new Server("http://10.111.17.139:5000", "Default server"));
+        mProperties = new ArrayList<>();
+        propertyPayloadMap = new HashMap<>();
+
+        propertyMap = new HashMap<>();
+        propertyMap.put("read", IntentProcessor.READ);
+        propertyMap.put("write", IntentProcessor.WRITE);
     }
 
     /*package*/ int getId() {
@@ -57,7 +69,7 @@ public class TestProfile implements Iterable<IntentProcessor> {
         return writeContent.get();
     }
 
-    public Set<Server> getServers() {
+    /*package*/ Set<Server> getServers() {
         return mServers;
     }
 
@@ -73,21 +85,33 @@ public class TestProfile implements Iterable<IntentProcessor> {
 
     /*package*/ TestProfile read(boolean read) {
         this.read = read;
+        if (read) {
+            mProperties.add("read");
+        } else {
+            mProperties.remove("read");
+        }
         return this;
     }
 
     /*package*/ TestProfile write(boolean write) {
         this.write = write;
+        if (write) {
+            mProperties.add("write");
+        } else {
+            mProperties.remove("write");
+        }
         return this;
     }
 
     /*package*/ TestProfile readContent(StringWrapper readContent) {
         this.readContent = readContent;
+        this.propertyPayloadMap.put("read", readContent);
         return this;
     }
 
     /*package*/ TestProfile toWrite(StringWrapper writeContent) {
         this.writeContent = writeContent;
+        this.propertyPayloadMap.put("write", writeContent);
         return this;
     }
 
@@ -102,14 +126,10 @@ public class TestProfile implements Iterable<IntentProcessor> {
         List<IntentProcessor> processors = new ArrayList<>();
         processors.add(ProcessorFactory.buildProcessor(IntentProcessor.META));
         index++;
-        if (read) {
-            processors.add(ProcessorFactory.buildProcessor(IntentProcessor.READ));
-            Log.d("NFCTAG", "just added : " + processors.get(index));
-            processors.get(index++).receive(readContent); // tell the processor where to store the read content.
-        }
-        if (write) {
-            processors.add(ProcessorFactory.buildProcessor(IntentProcessor.WRITE));
-            processors.get(index++).receive(writeContent); // tell the processor where to read the content to write from.
+        for (String property : mProperties) {
+            processors.add(ProcessorFactory.buildProcessor(propertyMap.get(property)));
+            Log.d("NFCTAG", "just added : " + property);
+            processors.get(index++).receive(propertyPayloadMap.get(property));
         }
         return processors;
     }
@@ -121,21 +141,30 @@ public class TestProfile implements Iterable<IntentProcessor> {
     /*package*/ JSONObject toJson() {
         JSONObject json = new JSONObject();
         JSONArray servers = new JSONArray();
+        JSONArray properties = new JSONArray();
         try {
             json.put("id", mId);
             json.put("name", mName);
             json.put("read", read);
             json.put("write", write);
             json.put("toWrite", writeContent.get());
+            for (String property : mProperties) {
+                properties.put(property);
+            }
             for (Server server : mServers) {
                 servers.put(server.toJson());
             }
+            json.put("properties", properties);
             json.put("servers", servers);
         } catch (org.json.JSONException ex) {
             ex.printStackTrace();
             return null; //not great
         }
         return json;
+    }
+
+    public boolean has(String property) {
+        return mProperties.contains(property);
     }
 
     @Override

@@ -11,7 +11,7 @@
     tools:context="com.example.robot_server.nfcapp.MainActivity">
 
     <LinearLayout
-        android:id="@+id/layout_name"
+        android:id="@+id/layout_profile_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
@@ -32,20 +32,20 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/layout_content"
+        android:id="@+id/layout_test_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/layout_name"
+        android:layout_below="@id/layout_profile_name"
         android:orientation="horizontal">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tag content : "
+            android:text="Test name : "
             android:textSize="18sp" />
 
         <TextView
-            android:id="@+id/tv_tag_content"
+            android:id="@+id/tv_test_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="18sp" />
@@ -56,7 +56,7 @@
         android:id="@+id/layout_write"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/layout_content"
+        android:layout_below="@id/layout_test_name"
         android:orientation="horizontal">
 
         <TextView

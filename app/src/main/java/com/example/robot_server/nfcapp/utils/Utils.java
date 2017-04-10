@@ -3,6 +3,11 @@ package com.example.robot_server.nfcapp.utils;
 import android.content.Context;
 import android.telephony.TelephonyManager;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.util.HashSet;
+import java.util.Set;
+
 import static android.content.Context.TELEPHONY_SERVICE;
 
 public class Utils {
@@ -12,5 +17,4 @@ public class Utils {
         TelephonyManager tm = (TelephonyManager) context.getSystemService(TELEPHONY_SERVICE);
         return tm.getDeviceId();
     }
-
 }

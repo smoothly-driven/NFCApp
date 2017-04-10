@@ -6,15 +6,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
 import android.nfc.NfcAdapter;
-import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -22,8 +18,15 @@ import com.example.robot_server.nfcapp.domain.NfcTestManager;
 import com.example.robot_server.nfcapp.domain.StringWrapper;
 import com.example.robot_server.nfcapp.domain.TestProfile;
 
+import org.androidannotations.annotations.AfterTextChange;
+import org.androidannotations.annotations.AfterViews;
+import org.androidannotations.annotations.Click;
+import org.androidannotations.annotations.EActivity;
+import org.androidannotations.annotations.ViewById;
+
 import static com.example.robot_server.nfcapp.domain.NfcTestManager.PLAIN_TEXT_MEDIA_TYPE;
 
+@EActivity(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity implements NfcTestController {
 
     public static final String START_TEST_TEXT = "Start test";
@@ -34,20 +37,30 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     public static final String STATUS_RUNNING = "Running";
     public static final String STATUS_PAUSED = "Paused";
     public static final String STATUS_NOT_RUNNING = "Not running";
+    @ViewById(R.id.tv_profile_name)
+    /*package*/ TextView mProfileNameTextView;
+    @ViewById(R.id.tv_test_name)
+    /*package*/ TextView mTestNameTextView;
+    @ViewById(R.id.et_to_write)
+    /*package*/ EditText mWriteToTagEditText;
+    @ViewById(R.id.chk_write)
+    /*package*/ CheckBox mShouldWriteCheckBox;
+    @ViewById(R.id.chk_read)
+    /*package*/ CheckBox mShouldReadCheckBox;
+    @ViewById(R.id.btn_start)
+    /*package*/ Button mStartButton;
+    @ViewById(R.id.btn_stop)
+    /*package*/ Button mStopButton;
+    @ViewById(R.id.btn_save_profile)
+    /*package*/ Button mSaveProfileButton;
+    @ViewById(R.id.btn_load_profile)
+    /*package*/ Button mLoadProfileButton;
+    @ViewById(R.id.tv_test_status)
+    /*package*/ TextView mStatusTextView;
+    @ViewById(R.id.tv_scans)
+    /*package*/ TextView mScansTextView;
 
     private NfcAdapter mNfcAdapter;
-    private TextView mProfileNameTextView;
-    private TextView mTagContentTextView;
-    private EditText mWriteToTagEditText;
-    private CheckBox mShouldWriteCheckBox;
-    private CheckBox mShouldReadCheckBox;
-    private Button mStartButton;
-    private Button mStopButton;
-    private Button mSaveProfileButton;
-    private Button mLoadProfileButton;
-    private TextView mStatusTextView;
-    private TextView mScansTextView;
-
     private StringWrapper mCardContent;
     private StringWrapper mToWrite;
 
@@ -85,14 +98,11 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         adapter.disableForegroundDispatch(activity);
     }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+    @AfterViews
+    protected void init() {
         if (!checkNfc()) return;
         setupLayoutComponents();
         mNfcTestManager = new NfcTestManager(this, mCardContent, mToWrite);
-        setupListeners();
     }
 
     @Override
@@ -123,8 +133,10 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     private void setupLayoutComponents() {
         mCardContent = new StringWrapper("");
         mToWrite = new StringWrapper("");
+
+        // commented out code was replaced by AndroidAnnotataions' black magic.
+        /*
         mProfileNameTextView = (TextView) findViewById(R.id.tv_profile_name);
-        mTagContentTextView = (TextView) findViewById(R.id.tv_tag_content);
         mWriteToTagEditText = (EditText) findViewById(R.id.et_to_write);
         mShouldWriteCheckBox = (CheckBox) findViewById(R.id.chk_write);
         mShouldReadCheckBox = (CheckBox) findViewById(R.id.chk_read);
@@ -134,25 +146,10 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         mSaveProfileButton = (Button) findViewById(R.id.btn_save_profile);
         mStatusTextView = (TextView) findViewById(R.id.tv_test_status);
         mScansTextView = (TextView) findViewById(R.id.tv_scans);
-
+        */
         mStartButton.setText(START_TEST_TEXT);
         mStopButton.setText(STOP_TEST_TEXT);
         mScansTextView.setText(String.valueOf(0));
-    }
-
-    private void setupListeners() {
-        CompoundButton.OnCheckedChangeListener chkListener = new OnCheckedChangeListener();
-        mShouldReadCheckBox.setOnCheckedChangeListener(chkListener);
-        mShouldWriteCheckBox.setOnCheckedChangeListener(chkListener);
-
-        TextWatcher textChangeListener = new OnTextChangeListener();
-        mWriteToTagEditText.addTextChangedListener(textChangeListener);
-        View.OnClickListener buttonClickListener = new OnButtonClickedListener();
-
-        mStartButton.setOnClickListener(buttonClickListener);
-        mStopButton.setOnClickListener(buttonClickListener);
-        mLoadProfileButton.setOnClickListener(buttonClickListener);
-        mSaveProfileButton.setOnClickListener(buttonClickListener);
     }
 
     @Override
@@ -201,7 +198,6 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     }
 
     private void updateUi() {
-        mTagContentTextView.setText(mCardContent.get());
         mWriteToTagEditText.setText(mToWrite.get());
         mScansTextView.setText(String.valueOf(mNfcTestManager.getScans()));
     }
@@ -210,65 +206,51 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     public void updateUi(TestProfile profile) {
         triggeredInternally = true;
         mProfileNameTextView.setText(profile.getName());
-        mTagContentTextView.setText(profile.getReadContent());
+        //mTestNameTextView.setText(profile.getTestName());
         mWriteToTagEditText.setText(profile.getWriteContent());
-        mShouldReadCheckBox.setChecked(profile.getRead());
-        mShouldWriteCheckBox.setChecked(profile.getWrite());
+        mShouldReadCheckBox.setChecked(profile.has("read"));
+        mShouldWriteCheckBox.setChecked(profile.has("write"));
         //profile.getServers();
         triggeredInternally = false;
         mScansTextView.setText(String.valueOf(mNfcTestManager.getScans()));
     }
 
-    private class OnButtonClickedListener implements View.OnClickListener {
-        @Override
-        public void onClick(View v) {
-            switch (v.getId()) {
-                case R.id.btn_start:
-                    mNfcTestManager.startClicked();
+
+    @Click(R.id.btn_start)
+    void onStartButtonClicked() {
+        mNfcTestManager.startClicked();
+    }
+
+    @Click(R.id.btn_stop)
+    void onStopButtonClicked() {
+        mNfcTestManager.stopClicked();
+    }
+
+    @Click(R.id.btn_load_profile)
+    void onLoadButtonClicked() {
+        mNfcTestManager.loadClicked();
+    }
+
+    @Click(R.id.btn_save_profile)
+    void onSaveButtonClicked() {
+        mNfcTestManager.saveClicked();
+    }
+
+    @Click({R.id.chk_write, R.id.chk_read})
+    void onWriteCheckedChanged(CheckBox cb) {
+        if (!triggeredInternally) {
+            switch (cb.getId()) {
+                case R.id.chk_read:
+                    mNfcTestManager.readChecked(cb.isChecked());
                     break;
-                case R.id.btn_stop:
-                    mNfcTestManager.stopClicked();
-                    break;
-                case R.id.btn_load_profile:
-                    mNfcTestManager.loadClicked();
-                    break;
-                case R.id.btn_save_profile:
-                    mNfcTestManager.saveClicked();
-                    break;
+                case R.id.chk_write:
+                    mNfcTestManager.writeChecked(cb.isChecked());
             }
         }
     }
 
-    private class OnCheckedChangeListener implements CompoundButton.OnCheckedChangeListener {
-        @Override
-        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            if (!triggeredInternally) {
-                switch (buttonView.getId()) {
-                    case R.id.chk_read:
-                        mNfcTestManager.readChecked(isChecked);
-                        break;
-                    case R.id.chk_write:
-                        mNfcTestManager.writeChecked(isChecked);
-                        break;
-                }
-            }
-        }
-    }
-
-    private class OnTextChangeListener implements TextWatcher {
-        @Override
-        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-        }
-
-        @Override
-        public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-        }
-
-        @Override
-        public void afterTextChanged(Editable s) {
-            if (!triggeredInternally) mToWrite.set(s.toString());
-        }
+    @AfterTextChange(R.id.et_to_write)
+    void onToWriteTextChanged(Editable e) {
+        if (!triggeredInternally) mToWrite.set(e.toString());
     }
 }

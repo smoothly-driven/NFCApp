@@ -4,12 +4,12 @@ import org.json.JSONObject;
 
 import java.io.Serializable;
 
-public class Server implements Serializable {
+/*package*/ class Server implements Serializable {
 
     private String mIp;
     private String mAlias;
 
-    public Server(String ip, String alias) {
+    /*package*/ Server(String ip, String alias) {
         this.mIp = ip;
         this.mAlias = alias;
     }
@@ -46,7 +46,7 @@ public class Server implements Serializable {
         return toJson().toString();
     }
 
-    public JSONObject toJson() {
+    /*package*/ JSONObject toJson() {
         JSONObject json = new JSONObject();
         try {
             json.put("ip", mIp);

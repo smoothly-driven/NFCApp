@@ -15,12 +15,11 @@ import com.example.robot_server.nfcapp.utils.HttpUtils;
 import com.example.robot_server.nfcapp.utils.Utils;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -33,7 +32,7 @@ public class NfcTestManager {
 
     public static final String PLAIN_TEXT_MEDIA_TYPE = "text/plain";
     private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
-    private static final String DEFAULT_SERVER_IP = "http://10.111.17.139:5000/nfc";
+    private static final String DEFAULT_SERVER_IP = "http://10.111.17.139:5000/api/nfc";
     private static final String RESULTS_ENDPOINT = "/results";
     //private static final String PROFILES_ENDPOINT = "/profiles";
     private static final String PROFILE_ENDPOINT = "/profile";
@@ -41,6 +40,8 @@ public class NfcTestManager {
     private NfcTestController mController;
     private Handler mHandler;
     private TestProfile mProfile;
+
+    private JSONObject mSourceProfile;
 
     private int mScans;
     private String mImei;
@@ -60,6 +61,8 @@ public class NfcTestManager {
         }
         mCardContent = cardContent;
         mToWrite = toWrite;
+
+        mSourceProfile = new JSONObject();
 
         mController = (NfcTestController) context;
         mHandler = new Handler(Looper.getMainLooper());
@@ -109,22 +112,39 @@ public class NfcTestManager {
     }
 
     private void loadProfile(JSONObject profile) {
-        try {
-            mProfile.id(profile.getInt("id"));
-            mProfile.name(profile.getString("name"));
-            mToWrite.set(profile.getString("toWrite"));
-            mProfile.toWrite(mToWrite);
-            mProfile.read(profile.getBoolean("read"));
-            mProfile.write(profile.getBoolean("write"));
-            mToWrite.set(profile.getString("toWrite"));
-            JSONArray servers = profile.getJSONArray("servers");
-            Set<Server> serverSet = new HashSet<>();
-            for (int i = 0; i < servers.length(); i++) {
-                serverSet.add(Server.fromJsonString(servers.getString(i)));
+        this.mSourceProfile = profile;
+    }
+
+    public boolean has(String key) {
+        return has(key, true);
+    }
+
+    public boolean has(String key, boolean isProperty) {
+        if (isProperty) {
+            JSONArray properties = mSourceProfile.optJSONArray("properties");
+            if (properties != null) {
+                for (int i = 0; i < properties.length(); i++) {
+                    if (key.equals(properties.opt(i))) return true;
+                }
             }
-            mProfile.servers(serverSet);
-            mController.updateUi(mProfile);
-        } catch (org.json.JSONException ex) {
+        }
+        return mSourceProfile.has(key);
+    }
+
+    public void set(String key) {
+        set(key, null, true);
+    }
+
+    public void set(String key, Object value, boolean isProperty) {
+        try {
+            if (isProperty) {
+                if (mSourceProfile.opt("properties") == null) mSourceProfile.put("properties", new JSONArray());
+                JSONArray properties = mSourceProfile.optJSONArray("properties");
+                properties.put(key);
+            } else {
+                mSourceProfile.put(key, value);
+            }
+        } catch (JSONException ex) {
             ex.printStackTrace();
         }
     }
