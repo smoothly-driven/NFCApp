@@ -1,9 +1,6 @@
 package com.example.robot_server.nfcapp;
 
-import android.app.Activity;
-import android.app.PendingIntent;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Color;
 import android.nfc.NfcAdapter;
 import android.support.v7.app.AppCompatActivity;
@@ -15,16 +12,14 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.example.robot_server.nfcapp.domain.NfcTestManager;
-import com.example.robot_server.nfcapp.domain.StringWrapper;
 import com.example.robot_server.nfcapp.domain.TestProfile;
+import com.example.robot_server.nfcapp.utils.Utils;
 
 import org.androidannotations.annotations.AfterTextChange;
 import org.androidannotations.annotations.AfterViews;
 import org.androidannotations.annotations.Click;
 import org.androidannotations.annotations.EActivity;
 import org.androidannotations.annotations.ViewById;
-
-import static com.example.robot_server.nfcapp.domain.NfcTestManager.PLAIN_TEXT_MEDIA_TYPE;
 
 @EActivity(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity implements NfcTestController {
@@ -61,54 +56,26 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     /*package*/ TextView mScansTextView;
 
     private NfcAdapter mNfcAdapter;
-    private StringWrapper mCardContent;
-    private StringWrapper mToWrite;
-
     private NfcTestManager mNfcTestManager;
-    private boolean triggeredInternally = false; //set to true when programmatically changing the value of checkboxes and such. Allows to control when to ignore listener calls
-
-    /**
-     * @param activity The corresponding {@link Activity} requesting the foreground dispatch.
-     * @param adapter  The {@link NfcAdapter} used for the foreground dispatch.
-     */
-    public void setupForegroundDispatch(final Activity activity, NfcAdapter adapter) {
-        final Intent intent = new Intent(activity.getApplicationContext(), activity.getClass());
-        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        final PendingIntent pendingIntent = PendingIntent.getActivity(activity.getApplicationContext(), 0, intent, 0);
-        IntentFilter[] filters = new IntentFilter[2];
-        String[][] techList = new String[][]{};
-        filters[0] = new IntentFilter();
-        filters[1] = new IntentFilter();
-        filters[0].addAction(NfcAdapter.ACTION_NDEF_DISCOVERED);
-        filters[1].addAction(NfcAdapter.ACTION_TAG_DISCOVERED);
-        filters[1].addCategory(Intent.CATEGORY_DEFAULT);
-        try {
-            filters[0].addDataType(PLAIN_TEXT_MEDIA_TYPE);
-        } catch (IntentFilter.MalformedMimeTypeException e) {
-            throw new RuntimeException("Check your mime type.");
-        }
-        adapter.enableForegroundDispatch(activity, pendingIntent, filters, techList);
-    }
-
-    /**
-     * @param activity The corresponding {@link Activity} requesting to stop the foreground dispatch.
-     * @param adapter  The {@link NfcAdapter} used for the foreground dispatch.
-     */
-    public void stopForegroundDispatch(final Activity activity, NfcAdapter adapter) {
-        adapter.disableForegroundDispatch(activity);
-    }
+    //set to true when programmatically changing the value of checkboxes and such.
+    // Allows to control when to ignore listener calls.
+    private boolean triggeredInternally = false;
 
     @AfterViews
+    /*
+     * This code is invoked by AndroidAnnotations as soon as it's done binding the requested views.
+     * It is essentially an onCreate.
+     */
     protected void init() {
         if (!checkNfc()) return;
         setupLayoutComponents();
-        mNfcTestManager = new NfcTestManager(this, mCardContent, mToWrite);
+        mNfcTestManager = new NfcTestManager(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        setupForegroundDispatch(this, mNfcAdapter);
+        Utils.setupForegroundDispatch(this, mNfcAdapter);
     }
 
     @Override
@@ -116,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         /*
          * Call this before onPause, otherwise an IllegalArgumentException is thrown as well.
          */
-        stopForegroundDispatch(this, mNfcAdapter);
+        Utils.stopForegroundDispatch(this, mNfcAdapter);
         super.onPause();
     }
 
@@ -131,22 +98,6 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     }
 
     private void setupLayoutComponents() {
-        mCardContent = new StringWrapper("");
-        mToWrite = new StringWrapper("");
-
-        // commented out code was replaced by AndroidAnnotataions' black magic.
-        /*
-        mProfileNameTextView = (TextView) findViewById(R.id.tv_profile_name);
-        mWriteToTagEditText = (EditText) findViewById(R.id.et_to_write);
-        mShouldWriteCheckBox = (CheckBox) findViewById(R.id.chk_write);
-        mShouldReadCheckBox = (CheckBox) findViewById(R.id.chk_read);
-        mStartButton = (Button) findViewById(R.id.btn_start);
-        mStopButton = (Button) findViewById(R.id.btn_stop);
-        mLoadProfileButton = (Button) findViewById(R.id.btn_load_profile);
-        mSaveProfileButton = (Button) findViewById(R.id.btn_save_profile);
-        mStatusTextView = (TextView) findViewById(R.id.tv_test_status);
-        mScansTextView = (TextView) findViewById(R.id.tv_scans);
-        */
         mStartButton.setText(START_TEST_TEXT);
         mStopButton.setText(STOP_TEST_TEXT);
         mScansTextView.setText(String.valueOf(0));
@@ -197,19 +148,14 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         mStatusTextView.setTextColor(Color.RED);
     }
 
-    private void updateUi() {
-        mWriteToTagEditText.setText(mToWrite.get());
-        mScansTextView.setText(String.valueOf(mNfcTestManager.getScans()));
-    }
-
     @Override
-    public void updateUi(TestProfile profile) {
+    public void updateUi() {
         triggeredInternally = true;
-        mProfileNameTextView.setText(profile.getName());
-        //mTestNameTextView.setText(profile.getTestName());
-        mWriteToTagEditText.setText(profile.getWriteContent());
-        mShouldReadCheckBox.setChecked(profile.has("read"));
-        mShouldWriteCheckBox.setChecked(profile.has("write"));
+        mProfileNameTextView.setText((String) mNfcTestManager.get("profileName"));
+        mTestNameTextView.setText((String) mNfcTestManager.get("testName"));
+        mWriteToTagEditText.setText((String) mNfcTestManager.get("toWrite"));
+        mShouldReadCheckBox.setChecked(mNfcTestManager.has("read"));
+        mShouldWriteCheckBox.setChecked(mNfcTestManager.has("write"));
         //profile.getServers();
         triggeredInternally = false;
         mScansTextView.setText(String.valueOf(mNfcTestManager.getScans()));
@@ -251,6 +197,6 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
 
     @AfterTextChange(R.id.et_to_write)
     void onToWriteTextChanged(Editable e) {
-        if (!triggeredInternally) mToWrite.set(e.toString());
+        if (!triggeredInternally) mNfcTestManager.onToWriteChanged(e.toString());
     }
 }

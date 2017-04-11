@@ -7,14 +7,13 @@ import android.os.Parcelable;
 import android.util.Log;
 
 import com.example.robot_server.nfcapp.domain.ScanResult;
-import com.example.robot_server.nfcapp.domain.StringWrapper;
 import com.example.robot_server.nfcapp.utils.NfcUtils;
 
 class ReadProcessor extends IntentProcessor {
 
     private static final int ID = IntentProcessor.READ;
 
-    private StringWrapper mString;
+    private String mString;
 
     public ReadProcessor() {
         super(ID);
@@ -30,13 +29,9 @@ class ReadProcessor extends IntentProcessor {
             }
             String cardContents = NfcUtils.readMessageContents(messages);
             builder.cardContent(cardContents);
-            if (mString != null) mString.set(cardContents);
+            if (mString != null) mString = cardContents;
             Log.v("NFCTAG", "messages were successfully decoded : " + cardContents);
         }
     }
 
-    @Override
-    public void receive(Object... args) {
-        mString = (StringWrapper) args[0];
-    }
 }

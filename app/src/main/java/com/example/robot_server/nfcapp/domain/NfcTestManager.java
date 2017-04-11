@@ -13,6 +13,8 @@ import com.example.robot_server.nfcapp.NfcTestController;
 import com.example.robot_server.nfcapp.processors.IntentProcessor;
 import com.example.robot_server.nfcapp.utils.HttpUtils;
 import com.example.robot_server.nfcapp.utils.Utils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -31,42 +33,40 @@ import okhttp3.Response;
 public class NfcTestManager {
 
     public static final String PLAIN_TEXT_MEDIA_TYPE = "text/plain";
-    private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
     private static final String DEFAULT_SERVER_IP = "http://10.111.17.139:5000/api/nfc";
-    private static final String RESULTS_ENDPOINT = "/results";
     //private static final String PROFILES_ENDPOINT = "/profiles";
     private static final String PROFILE_ENDPOINT = "/profile";
+    private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
+    private static final String RESULTS_ENDPOINT = "/results";
+    private final Gson mGson;
 
     private NfcTestController mController;
     private Handler mHandler;
     private TestProfile mProfile;
-
     private JSONObject mSourceProfile;
-
     private int mScans;
     private String mImei;
     private String mFamocoId;
     private String mModel;
     private String mImage;
 
-    private StringWrapper mCardContent;
-    private StringWrapper mToWrite;
-
     private boolean isRunning, isPaused;
 
     @SuppressWarnings("all")
-    public NfcTestManager(Context context, StringWrapper cardContent, StringWrapper toWrite) {
+    public NfcTestManager(Context context) {
         if (!(context instanceof NfcTestController)) {
             throw new IllegalArgumentException("Context is not an instance of NfcTestController");
         }
-        mCardContent = cardContent;
-        mToWrite = toWrite;
-
-        mSourceProfile = new JSONObject();
 
         mController = (NfcTestController) context;
         mHandler = new Handler(Looper.getMainLooper());
-        mProfile = new TestProfile();
+
+        mSourceProfile = new JSONObject();
+
+        mGson = new GsonBuilder()
+                .serializeNulls()
+                .setPrettyPrinting()
+                .create();
 
         this.mImei = Utils.getDeviceImei(context);
         this.mFamocoId = Build.SERIAL;
@@ -81,14 +81,20 @@ public class NfcTestManager {
     public void handleIntent(Intent intent) {
         if (isRunning && !isPaused) {
             long intentReceptionTime = SystemClock.elapsedRealtime(); //apparently better than System.currentTimeMillis() ?
-            ScanResult.ScanResultBuilder builder = new ScanResult.ScanResultBuilder(mImei, mFamocoId, mModel, mImage).scans(++mScans);
+            ScanResult.ScanResultBuilder builder = new ScanResult.ScanResultBuilder()
+                    .imei(mImei)
+                    .image(mImage)
+                    .model(mModel)
+                    .famocoId(mFamocoId)
+                    .testProfile(mProfile.getName())
+                    .scans(++mScans);
+
             for (IntentProcessor processor : mProfile) {
                 processor.process(intent, builder);
             }
             long scanDuration = SystemClock.elapsedRealtime() - intentReceptionTime;
             builder.scanDuration(scanDuration)
-                    .timestamp(new Date())
-                    .testProfile(mProfile.getName());
+                    .timestamp(new Date());
 
             Toast.makeText((Context) mController, mProfile.getName() + " took " + scanDuration + " ms.", Toast.LENGTH_SHORT).show();
 
@@ -98,28 +104,20 @@ public class NfcTestManager {
     }
 
     private void postScanResult(ScanResult result) {
-        postJson(RESULTS_ENDPOINT, result.toJson());
-    }
-
-    private void postJson(String endpoint, JSONObject body) {
-        for (Server server : mProfile.getServers()) {
-            Request request = new Request.Builder()
-                    .url(server.getIp() + endpoint)
-                    .post(RequestBody.create(JSON_MEDIA_TYPE, body.toString()))
-                    .build();
-            HttpUtils.send(request);
-        }
+        postJson(RESULTS_ENDPOINT, mGson.toJson(result, ScanResult.class));
     }
 
     private void loadProfile(JSONObject profile) {
         this.mSourceProfile = profile;
+        checkServers();
+        mController.updateUi();
     }
 
     public boolean has(String key) {
         return has(key, true);
     }
 
-    public boolean has(String key, boolean isProperty) {
+    private boolean has(String key, boolean isProperty) {
         if (isProperty) {
             JSONArray properties = mSourceProfile.optJSONArray("properties");
             if (properties != null) {
@@ -131,22 +129,12 @@ public class NfcTestManager {
         return mSourceProfile.has(key);
     }
 
-    public void set(String key) {
-        set(key, null, true);
-    }
-
-    public void set(String key, Object value, boolean isProperty) {
-        try {
-            if (isProperty) {
-                if (mSourceProfile.opt("properties") == null) mSourceProfile.put("properties", new JSONArray());
-                JSONArray properties = mSourceProfile.optJSONArray("properties");
-                properties.put(key);
-            } else {
-                mSourceProfile.put(key, value);
-            }
-        } catch (JSONException ex) {
-            ex.printStackTrace();
+    public Object get(String key) {
+        Object obj = mSourceProfile.opt(key);
+        if (obj == null) {
+            return "";
         }
+        return obj;
     }
 
     private void syncTestProfile() {
@@ -177,9 +165,41 @@ public class NfcTestManager {
         HttpUtils.send(request, c);
     }
 
+    private void postJson(String endpoint, String body) {
+        Log.d("NFCTAG", "posting " + body);
+        for (Server server : mProfile.getServers()) {
+            Log.d("NFCTAG", "server : " + server.getIp() + endpoint);
+            Request request = new Request.Builder()
+                    .url(server.getIp() + endpoint)
+                    .post(RequestBody.create(JSON_MEDIA_TYPE, body))
+                    .build();
+            HttpUtils.send(request);
+        }
+    }
+
+    private void checkServers() {
+        try {
+            Log.d("NFCTAG", mSourceProfile.getJSONArray("servers").toString());
+            JSONArray servers = mSourceProfile.optJSONArray("servers");
+            if (servers == null) {
+                servers = new JSONArray();
+                mSourceProfile.put("servers", servers);
+            }
+            if (servers.length() == 0) {
+                JSONObject server = new JSONObject();
+                server.put("alias", "Default server");
+                server.put("ip", DEFAULT_SERVER_IP);
+            } else {
+                servers.remove(1);
+            }
+        } catch (JSONException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     private void startTest() {
         mScans = 0;
-        mProfile.setup();
+        mProfile = mGson.fromJson(mSourceProfile.toString(), TestProfile.class).setup(mSourceProfile);
         mController.startTest();
         isRunning = true;
         isPaused = false;
@@ -226,25 +246,49 @@ public class NfcTestManager {
      * Called when the state of the read checkbox changes.
      */
     public void readChecked(boolean read) {
-        mProfile.readContent(mCardContent);
-        mProfile.read(read);
+        if (read) {
+            try {
+                mSourceProfile.optJSONArray("properties").put(IntentProcessor.READ, "read");
+            } catch (JSONException ex) {
+                ex.printStackTrace();
+            }
+        } else {
+            mSourceProfile.optJSONArray("properties").remove(IntentProcessor.READ);
+        }
     }
 
     /*
      * Called when the state of the write checkbox changes.
      */
     public void writeChecked(boolean write) {
-        mProfile.toWrite(mToWrite);
-        mProfile.write(write);
+        if (write) {
+            try {
+                mSourceProfile.optJSONArray("properties").put(IntentProcessor.WRITE, "write");
+            } catch (JSONException ex) {
+                ex.printStackTrace();
+            }
+        } else {
+            mSourceProfile.optJSONArray("properties").remove(IntentProcessor.WRITE);
+        }
+    }
+
+    /*
+     * Called when the toWrite content changes.
+     */
+    public void onToWriteChanged(String toWrite) {
+        try {
+            mSourceProfile.put("toWrite", toWrite);
+        } catch (JSONException ex) {
+            ex.printStackTrace();
+        }
     }
 
     /*
      * When the save profile button is clicked
      */
     public void saveClicked() {
-        JSONObject profile = mProfile.toJson();
-        if (profile != null) {
-            postJson(PROFILE_ENDPOINT, profile);
+        if (mSourceProfile != null) {
+            postJson(PROFILE_ENDPOINT, mSourceProfile.toString());
         }
     }
 

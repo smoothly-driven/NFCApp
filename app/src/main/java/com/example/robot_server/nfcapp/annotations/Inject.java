@@ -5,6 +5,6 @@ import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Inject {
-    String value();
+    String name() default "";
     boolean nullable() default true;
 }

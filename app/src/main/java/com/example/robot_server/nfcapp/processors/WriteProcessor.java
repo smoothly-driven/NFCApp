@@ -7,32 +7,28 @@ import android.util.Log;
 
 import com.example.robot_server.nfcapp.annotations.Inject;
 import com.example.robot_server.nfcapp.domain.ScanResult;
-import com.example.robot_server.nfcapp.domain.StringWrapper;
 import com.example.robot_server.nfcapp.utils.NfcUtils;
 
 class WriteProcessor extends IntentProcessor {
 
     private static final int ID = IntentProcessor.WRITE;
 
-    @Inject(value="toWrite", nullable=false)
-    private StringWrapper mTextToWrite;
+    @Inject(name = "toWrite", nullable = false)
+    private String mToWrite;
 
     public WriteProcessor() {
         super(ID);
+        mToWrite = null;
     }
 
     @Override
     public void process(Intent intent, ScanResult.ScanResultBuilder builder) {
         Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-        int opStatus = NfcUtils.writeTag(NfcUtils.getMessageAsNdef(mTextToWrite.get()), tag);
+        int opStatus = NfcUtils.writeTag(NfcUtils.getMessageAsNdef(mToWrite), tag);
         Log.v("NFCTAG", "writing operation returned a code " + opStatus);
         if (opStatus == NfcUtils.CODE_SUCCESS) {
-            builder.cardContent(mTextToWrite.get());
+            builder.cardContent(mToWrite);
         }
     }
 
-    @Override
-    public void receive(Object... args) {
-        mTextToWrite = (StringWrapper) args[0];
-    }
 }

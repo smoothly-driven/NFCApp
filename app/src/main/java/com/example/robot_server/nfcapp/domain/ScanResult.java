@@ -1,37 +1,48 @@
 package com.example.robot_server.nfcapp.domain;
 
+import com.example.robot_server.nfcapp.annotations.Inject;
+import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ScanResult {
 
+    @SerializedName("cardUuid")
     private final String mCardUid;
+    @SerializedName("cardContent")
     private final String mCardContent;
+    @SerializedName("cardTechnology")
     private final String[] mCardTechnology;
+    @SerializedName("identifiers")
+    private final Map<String, String> mIdentifiers;
+    @SerializedName("scanDuration")
     private final long mScanDuration;
+    @SerializedName("scans")
     private final int mScans;
-
-    private final String mImei;
-    private final String mFamocoId;
-    private final String mModel;
-    private final String mImage;
+    @SerializedName("@timestamp")
     private final Date mTimestamp;
+    @SerializedName("testProfileName")
     private String mTestProfile;
+
+    //TODO : dependency injector
+    @Inject()
+    private transient Gson mGson;
 
     private ScanResult(ScanResultBuilder builder) {
         this.mCardUid = builder.mCardUid;
         this.mCardContent = builder.mCardContent;
         this.mCardTechnology = builder.mCardTechnology;
         this.mScans = builder.mScans;
-        this.mImei = builder.mImei;
-        this.mFamocoId = builder.mFamocoId;
-        this.mModel = builder.mModel;
-        this.mImage = builder.mImage;
         this.mScanDuration = builder.mScanDuration;
         this.mTimestamp = builder.mTimestamp;
         this.mTestProfile = builder.mTestProfile;
+        this.mIdentifiers = builder.mIdentifiers;
     }
 
     JSONObject toJson() {
@@ -39,10 +50,9 @@ public class ScanResult {
         JSONObject testDetails = new JSONObject();
         JSONObject jsonBody = new JSONObject();
         try {
-            identifiers.put("image", mImage);
-            identifiers.put("famoco_id", mFamocoId);
-            identifiers.put("model", mModel);
-            identifiers.put("imei", mImei);
+            for (Map.Entry entry : mIdentifiers.entrySet()) {
+                identifiers.put((String) entry.getKey(), entry.getValue());
+            }
             testDetails.put("testProfile", mTestProfile);
             jsonBody.put("card_uid", mCardUid);
             jsonBody.put("card_technology", new JSONArray(mCardTechnology));
@@ -67,23 +77,36 @@ public class ScanResult {
 
         private String mCardUid;
         private String mCardContent;
+        private Map<String, String> mIdentifiers;
         private String[] mCardTechnology;
         private long mScanDuration;
         private int mScans;
 
-        private String mImei;
-        private String mFamocoId;
-        private String mModel;
-        private String mImage;
-
         private Date mTimestamp;
         private String mTestProfile;
 
-        ScanResultBuilder(String imei, String famocoId, String model, String image) {
-            this.mImei = imei;
-            this.mFamocoId = famocoId;
-            this.mModel = model;
-            this.mImage = image;
+        /*package*/ ScanResultBuilder() {
+            mIdentifiers = new HashMap<>();
+        }
+
+        public ScanResultBuilder imei(String imei) {
+            mIdentifiers.put("imei", imei);
+            return this;
+        }
+
+        public ScanResultBuilder image(String image) {
+            mIdentifiers.put("image", image);
+            return this;
+        }
+
+        public ScanResultBuilder famocoId(String famocoId) {
+            mIdentifiers.put("famocoId", famocoId);
+            return this;
+        }
+
+        public ScanResultBuilder model(String model) {
+            mIdentifiers.put("model", model);
+            return this;
         }
 
         public ScanResultBuilder cardUid(String cardUid) {

@@ -1,12 +1,16 @@
 package com.example.robot_server.nfcapp.domain;
 
+import com.google.gson.annotations.SerializedName;
+
 import org.json.JSONObject;
 
 import java.io.Serializable;
 
 /*package*/ class Server implements Serializable {
 
+    @SerializedName("ip")
     private String mIp;
+    @SerializedName("alias")
     private String mAlias;
 
     /*package*/ Server(String ip, String alias) {
@@ -14,32 +18,9 @@ import java.io.Serializable;
         this.mAlias = alias;
     }
 
-    private static Server fromJson(JSONObject server) {
-        try {
-            return new Server(server.getString("ip"), server.getString("alias"));
-        } catch (org.json.JSONException ex) {
-            ex.printStackTrace();
-        }
-        return null;
-    }
-
-    static Server fromJsonString(String server) {
-        try {
-            return fromJson(new JSONObject(server));
-        } catch (org.json.JSONException ex) {
-            ex.printStackTrace();
-        }
-        return null;
-    }
-
     String getIp() {
         return mIp;
     }
-
-    /*
-    public String getAlias() {
-        return mAlias;
-    }*/
 
     @Override
     public String toString() {

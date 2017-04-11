@@ -12,6 +12,6 @@ public interface NfcTestController {
 
     void stopTest();
 
-    void updateUi(TestProfile profile);
+    void updateUi();
 
 }

@@ -22,7 +22,4 @@ public abstract class IntentProcessor {
 
     public abstract void process(Intent intent, ScanResult.ScanResultBuilder builder);
 
-    public void receive(Object... args) {
-
-    }
 }
