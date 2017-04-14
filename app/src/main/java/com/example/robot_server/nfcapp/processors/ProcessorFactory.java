@@ -1,6 +1,8 @@
 package com.example.robot_server.nfcapp.processors;
 
+import com.example.robot_server.nfcapp.AppContext;
 import com.example.robot_server.nfcapp.annotations.Inject;
+import com.example.robot_server.nfcapp.utils.JsonUtils;
 
 import org.json.JSONObject;
 
@@ -11,43 +13,43 @@ import java.util.Set;
 
 public class ProcessorFactory {
 
-    private static final Class[] PROCESSORS = {MetaProcessor.class, ReadProcessor.class, WriteProcessor.class};
-
     /**
      * Finds the concrete {@link IntentProcessor} Class based on the given id.
+     * By default it looks for the class name in the properties file, but fallsback to looking in
+     * the processors package for a processor bearing the right name. Not ideal.
      *
-     * @param id the {@link IntentProcessor} type identifier { {@link MetaProcessor}, {@link ReadProcessor}, {@link WriteProcessor} }.
+     * @param id the {@link IntentProcessor} type identifier.
      * @return the concrete {@link IntentProcessor} class.
-     * @throws NoSuchFieldException   Should never occur.
-     * @throws IllegalAccessException Should never occur.
+     * @throws ClassNotFoundException Can only occur if the value for the given id is incorrect
+     *                                or missing frim the properties file and the processors package doesn't have a class named
+     *                                {@param id} + 'Processor'.
+     *                                Example: if the given id is 'read' and the props file doesn't have an entry for it,
+     *                                the method will try to find a class with a FQDN of com.blabla.nfcapp.processors.ReadProcessor .
      */
-    private static Class findClass(int id) throws NoSuchFieldException, IllegalAccessException {
-        for (Class c : PROCESSORS) {
-            Field f = c.getDeclaredField("ID");
-            f.setAccessible(true);
-            if (f.getInt(null) == id)
-                return c;
+    private static Class findClass(String id) throws ClassNotFoundException {
+        String className = AppContext.getProperty(id);
+        if (className != null) {
+            return Class.forName(className);
+        } else { //last resort, try and find a processor in the processors package
+            String processorName = id.toLowerCase().
+                    substring(0, 1).toUpperCase() +
+                    id.toLowerCase().
+                            substring(1) + "Processor";
+            return Class.forName(ProcessorFactory.class.getPackage().getName() + "." + processorName);
         }
-        return null;
     }
 
     /**
      * Creates an instance of {@link IntentProcessor} based on the given id.
      *
-     * @param id the IntentProcessor type identifier { {@link MetaProcessor}, {@link ReadProcessor}, {@link WriteProcessor} }.
+     * @param id the IntentProcessor type identifier.
      * @return the newly created instance.
      */
-    public static IntentProcessor buildProcessor(int id) {
+    public static IntentProcessor buildProcessor(String id) {
         try {
             Class c = findClass(id);
-            if (c != null) {
-                Field f = c.getDeclaredField("ID");
-                f.setAccessible(true);
-                if (f.getInt(null) == id) {
-                    return (IntentProcessor) c.newInstance();
-                }
-            }
-        } catch (NoSuchFieldException | InstantiationException | IllegalAccessException ex) {
+            return (IntentProcessor) c.newInstance();
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException ex) {
             ex.printStackTrace();
         }
         return null;
@@ -56,16 +58,15 @@ public class ProcessorFactory {
     /**
      * Creates an instance of {@link IntentProcessor} based on the given id and injects dependencies if necessary.
      *
-     * @param id      the IntentProcessor type identifier { {@link MetaProcessor}, {@link ReadProcessor}, {@link WriteProcessor} }.
+     * @param id      the IntentProcessor type identifier.
      * @param options the object containing the options for dependency injection.
      * @return the newly created instance.
      */
-    public static IntentProcessor buildProcessor(int id, JSONObject options) {
+    public static IntentProcessor buildProcessor(String id, JSONObject options) {
         try {
             Class c = findClass(id);
-            if (c != null)
-                return buildProcessor(c, options);
-        } catch (NoSuchFieldException | InstantiationException | IllegalAccessException ex) {
+            return buildProcessor(c, options);
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException ex) {
             ex.printStackTrace();
         }
         return null;
@@ -85,7 +86,7 @@ public class ProcessorFactory {
         Set<Field> targets = findFieldsByAnnotation(c, Inject.class);
         for (Field target : targets) {
             Inject inject = target.getAnnotation(Inject.class);
-            Object option = options.opt(inject.name());
+            Object option = JsonUtils.getNested(options, inject.name()); //support for nested keys, like 'identifiers.imei'
             inject(target, inject, option, processor);
         }
         return processor;
@@ -105,8 +106,9 @@ public class ProcessorFactory {
                 targetField.setAccessible(true);
                 Class targetType = targetField.getType();
                 targetField.set(instance, targetType.cast(dependency)); //inject!
+                targetField.setAccessible(false);
             } else if (!inject.nullable()) {
-                throw new IllegalArgumentException("no value for " + inject.name() + " provided");
+                throw new IllegalArgumentException("no value for dependency " + inject.name() + " provided");
             }
         } catch (IllegalAccessException ex) {
             ex.printStackTrace();

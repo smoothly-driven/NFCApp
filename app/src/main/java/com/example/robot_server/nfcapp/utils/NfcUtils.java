@@ -9,6 +9,9 @@ import android.nfc.tech.NdefFormatable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+/**
+ * This is all code found on the Internet. Should probably tidy it up.
+ */
 public class NfcUtils {
 
     public static final int CODE_SUCCESS = 0;

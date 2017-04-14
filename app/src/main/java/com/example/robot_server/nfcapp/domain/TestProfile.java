@@ -9,22 +9,12 @@ import com.google.gson.annotations.SerializedName;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class TestProfile implements Iterable<IntentProcessor> {
-
-    private static transient Map<String, Integer> propertyMap = new HashMap<>();
-
-    //TODO : dependency injector. Makes all of this disappear.
-    static {
-        propertyMap.put("read", IntentProcessor.READ);
-        propertyMap.put("write", IntentProcessor.WRITE);
-    }
 
     @SerializedName("properties")
     private List<String> mProperties;
@@ -65,12 +55,12 @@ public class TestProfile implements Iterable<IntentProcessor> {
 
     @SuppressWarnings("all")
     private List<IntentProcessor> generateProcessors(JSONObject options) {
-        int index = 0;
         List<IntentProcessor> processors = new ArrayList<>();
-        processors.add(ProcessorFactory.buildProcessor(IntentProcessor.META));
-        index++;
+        if (!mProperties.contains(IntentProcessor.META)) { //meta is good, should always have a meta
+            processors.add(ProcessorFactory.buildProcessor(IntentProcessor.META));
+        }
         for (String property : mProperties) {
-            processors.add(ProcessorFactory.buildProcessor(propertyMap.get(property), options));
+            processors.add(ProcessorFactory.buildProcessor(property, options));
             Log.d("NFCTAG", "just added : " + property);
         }
         return processors;

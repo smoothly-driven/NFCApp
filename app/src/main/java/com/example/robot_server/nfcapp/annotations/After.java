@@ -7,8 +7,6 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Inject {
-    String name() default "";
-
-    boolean nullable() default true;
+public @interface After {
+    String value() default "";
 }

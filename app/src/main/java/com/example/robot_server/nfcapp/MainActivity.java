@@ -12,7 +12,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.example.robot_server.nfcapp.domain.NfcTestManager;
-import com.example.robot_server.nfcapp.domain.TestProfile;
 import com.example.robot_server.nfcapp.utils.Utils;
 
 import org.androidannotations.annotations.AfterTextChange;
@@ -32,6 +31,7 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
     public static final String STATUS_RUNNING = "Running";
     public static final String STATUS_PAUSED = "Paused";
     public static final String STATUS_NOT_RUNNING = "Not running";
+
     @ViewById(R.id.tv_profile_name)
     /*package*/ TextView mProfileNameTextView;
     @ViewById(R.id.tv_test_name)
@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
      */
     protected void init() {
         if (!checkNfc()) return;
+        AppContext.loadContext(this);
         setupLayoutComponents();
         mNfcTestManager = new NfcTestManager(this);
     }
@@ -80,9 +81,7 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
 
     @Override
     protected void onPause() {
-        /*
-         * Call this before onPause, otherwise an IllegalArgumentException is thrown as well.
-         */
+        //Call this before onPause, otherwise an IllegalArgumentException is thrown as well.
         Utils.stopForegroundDispatch(this, mNfcAdapter);
         super.onPause();
     }
@@ -115,6 +114,8 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         mWriteToTagEditText.setEnabled(false);
         mShouldWriteCheckBox.setEnabled(false);
         mShouldReadCheckBox.setEnabled(false);
+        mLoadProfileButton.setEnabled(false);
+        mSaveProfileButton.setEnabled(false);
         mStopButton.setEnabled(true);
         mStartButton.setText(PAUSE_TEST_TEXT);
         mStatusTextView.setText(STATUS_RUNNING);
@@ -127,6 +128,7 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         mStartButton.setText(RESUME_TEST_TEXT);
         mStatusTextView.setText(STATUS_PAUSED);
         mStatusTextView.setTextColor(Color.BLUE);
+        updateUi();
     }
 
     @Override
@@ -142,10 +144,13 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         mWriteToTagEditText.setEnabled(true);
         mShouldWriteCheckBox.setEnabled(true);
         mShouldReadCheckBox.setEnabled(true);
+        mLoadProfileButton.setEnabled(true);
+        mSaveProfileButton.setEnabled(true);
         mStopButton.setEnabled(false);
         mStartButton.setText(START_TEST_TEXT);
         mStatusTextView.setText(STATUS_NOT_RUNNING);
         mStatusTextView.setTextColor(Color.RED);
+        updateUi();
     }
 
     @Override
@@ -161,25 +166,24 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         mScansTextView.setText(String.valueOf(mNfcTestManager.getScans()));
     }
 
-
     @Click(R.id.btn_start)
     void onStartButtonClicked() {
-        mNfcTestManager.startClicked();
+        mNfcTestManager.onStartTest();
     }
 
     @Click(R.id.btn_stop)
     void onStopButtonClicked() {
-        mNfcTestManager.stopClicked();
+        mNfcTestManager.onStopTest();
     }
 
     @Click(R.id.btn_load_profile)
     void onLoadButtonClicked() {
-        mNfcTestManager.loadClicked();
+        mNfcTestManager.onLoad();
     }
 
     @Click(R.id.btn_save_profile)
     void onSaveButtonClicked() {
-        mNfcTestManager.saveClicked();
+        mNfcTestManager.onSave();
     }
 
     @Click({R.id.chk_write, R.id.chk_read})
@@ -187,10 +191,10 @@ public class MainActivity extends AppCompatActivity implements NfcTestController
         if (!triggeredInternally) {
             switch (cb.getId()) {
                 case R.id.chk_read:
-                    mNfcTestManager.readChecked(cb.isChecked());
+                    mNfcTestManager.onReadChanged(cb.isChecked());
                     break;
                 case R.id.chk_write:
-                    mNfcTestManager.writeChecked(cb.isChecked());
+                    mNfcTestManager.onWriteChanged(cb.isChecked());
             }
         }
     }

@@ -1,0 +1,3 @@
+meta=com.example.robot_server.nfcapp.processors.MetaProcessor
+read=com.example.robot_server.nfcapp.processors.ReadProcessor
+write=com.example.robot_server.nfcapp.processors.WriteProcessor
